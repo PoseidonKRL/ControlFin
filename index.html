@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ControlFin</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="apple-touch-icon" href="icon-192x192.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      @import url('https://rsms.me/inter/inter.css');
+
+      :root[data-theme="galaxy"] {
+        --color-bg-primary: #0f172a; /* slate-900 */
+        --color-bg-secondary: #1e293b; /* slate-800 */
+        --color-bg-card: rgba(30, 41, 59, 0.5); /* slate-800/50 */
+        --color-text-primary: #e2e8f0; /* slate-200 */
+        --color-text-secondary: #94a3b8; /* slate-400 */
+        --color-border: #334155; /* slate-700 */
+        --color-accent: #9333ea; /* purple-600 */
+        --color-accent-hover: #a855f7; /* purple-500 */
+        --color-success: #4ade80; /* green-400 */
+        --color-danger: #f87171; /* red-400 */
+        --color-danger-strong: #dc2626; /* red-600 */
+        --scrollbar-track: #1e293b;
+        --scrollbar-thumb: #475569;
+        --scrollbar-thumb-hover: #64748b;
+      }
+
+      :root[data-theme="minimalist"] {
+        --color-bg-primary: #f9fafb; /* gray-50 */
+        --color-bg-secondary: #ffffff; /* white */
+        --color-bg-card: #ffffff; /* white */
+        --color-text-primary: #1f2937; /* gray-800 */
+        --color-text-secondary: #6b7280; /* gray-500 */
+        --color-border: #e5e7eb; /* gray-200 */
+        --color-accent: #2563eb; /* blue-600 */
+        --color-accent-hover: #3b82f6; /* blue-500 */
+        --color-success: #16a34a; /* green-600 */
+        --color-danger: #ef4444; /* red-500 */
+        --color-danger-strong: #dc2626; /* red-600 */
+        --scrollbar-track: #f1f5f9;
+        --scrollbar-thumb: #cbd5e1;
+        --scrollbar-thumb-hover: #94a3b8;
+      }
+
+      /* Custom scrollbar for a better look */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--scrollbar-track);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-thumb-hover);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "recharts": "https://aistudiocdn.com/recharts@^3.2.1",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.20.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
