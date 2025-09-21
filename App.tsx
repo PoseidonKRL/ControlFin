@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, Sector } from 'recharts';
 import { UserData, Page, Transaction, TransactionType, Category, ChatMessage, UserProfile } from './types';
@@ -1365,7 +1366,7 @@ const App: React.FC = () => {
     useEffect(() => {
         if ('serviceWorker' in navigator) {
           window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
+            navigator.serviceWorker.register('./sw.js')
               .then(registration => console.log('Service Worker registered with scope: ', registration.scope))
               .catch(err => console.log('Service Worker registration failed: ', err));
           });
