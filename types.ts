@@ -20,7 +20,8 @@ export interface Transaction {
 export interface Category {
   id: string;
   name: string;
-  icon?: string;
+  // FIX: Made icon property required as application logic ensures it always has a value.
+  icon: string;
 }
 
 export interface ChatMessage {

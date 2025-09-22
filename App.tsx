@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, Sector } from 'recharts';
 import { UserData, Page, Transaction, TransactionType, Category, ChatMessage, UserProfile } from './types';
@@ -1420,7 +1421,9 @@ const App: React.FC = () => {
             const savedData = storageService.getUserData(currentUser.username);
             if (savedData) {
                 const parsedData = savedData; // Data is already parsed by service
-                const categoriesWithIcons = parsedData.categories.map((c: Category) => ({
+                // FIX: Cast categories from storage to handle legacy data that may be missing an icon,
+                // before mapping and ensuring every category conforms to the updated Category type.
+                const categoriesWithIcons = (parsedData.categories as any[]).map((c): Category => ({
                     ...c,
                     icon: c.icon ?? INITIAL_CATEGORIES.find(ic => ic.name === c.name)?.icon ?? 'question_mark_circle'
                 }));
