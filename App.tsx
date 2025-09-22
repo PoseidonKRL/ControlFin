@@ -943,7 +943,9 @@ const SettingsPage: React.FC<{
 
     const handleAddCategory = () => {
         if (newCategoryName.trim() && !categories.some(c => c.name.toLowerCase() === newCategoryName.trim().toLowerCase())) {
-            const newCategory = {
+            // FIX: Explicitly type `newCategory` as `Category` to align with the `onUpdateCategories` signature.
+            // This resolves a subtle type inference issue where the compiler might expect a more specific type.
+            const newCategory: Category = {
                 id: `cat${Date.now()}`,
                 name: newCategoryName.trim(),
                 icon: 'question_mark_circle', // Default icon
