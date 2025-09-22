@@ -4,8 +4,6 @@ const CORE_ASSETS = [
   './index.html',
   './bundle.js',
   './manifest.json',
-  './icon-192x192.png',
-  './icon-512x512.png',
   'https://cdn.tailwindcss.com',
   'https://rsms.me/inter/inter.css',
   'https://www.transparenttextures.com/patterns/stardust.png'

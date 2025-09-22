@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, Sector } from 'recharts';
 import { UserData, Page, Transaction, TransactionType, Category, ChatMessage, UserProfile } from './types';
@@ -1090,7 +1091,7 @@ const SettingsPage: React.FC<{
                                     <Input
                                         type="text"
                                         value={editingCategory.name}
-                                        onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                                        onChange={(e) => setEditingCategory(prev => (prev ? { ...prev, name: e.target.value } : null))}
                                         className="flex-grow min-w-[120px]"
                                         autoFocus
                                     />

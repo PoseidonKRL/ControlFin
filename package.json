@@ -5,7 +5,7 @@
   "main": "index.tsx",
   "scripts": {
     "build": "esbuild index.tsx --bundle --outfile=dist/bundle.js --jsx=automatic --minify",
-    "postbuild": "cp index.html manifest.json sw.js icon-192x192.png icon-512x512.png dist/"
+    "postbuild": "cp index.html manifest.json sw.js dist/"
   },
   "dependencies": {
     "react": "^19.1.1",

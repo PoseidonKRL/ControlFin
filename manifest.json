@@ -2,20 +2,7 @@
   "short_name": "ControlFin",
   "name": "ControlFin",
   "description": "Sua galáxia de finanças pessoais.",
-  "icons": [
-    {
-      "src": "icon-192x192.png",
-      "type": "image/png",
-      "sizes": "192x192",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512x512.png",
-      "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "any maskable"
-    }
-  ],
+  "icons": [],
   "start_url": ".",
   "display": "standalone",
   "scope": ".",
