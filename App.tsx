@@ -4,6 +4,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieC
 import { UserData, Page, Transaction, TransactionType, Category, ChatMessage, UserProfile } from './types';
 import { formatCurrency, processChartData, exportToCSV } from './utils/helpers';
 import { getFinAssistResponse } from './services/geminiService';
+import * as storageService from './services/storageService';
 import { Modal, Button, Input, Select, Card, Spinner, ConfirmationModal, IconPickerModal } from './components/ui';
 import { Icon, availableIcons } from './components/icons';
 
@@ -941,7 +942,7 @@ const SettingsPage: React.FC<{
 
     const handleAddCategory = () => {
         if (newCategoryName.trim() && !categories.some(c => c.name.toLowerCase() === newCategoryName.trim().toLowerCase())) {
-            const newCategory: Category = {
+            const newCategory = {
                 id: `cat${Date.now()}`,
                 name: newCategoryName.trim(),
                 icon: 'question_mark_circle', // Default icon
@@ -1256,6 +1257,20 @@ const FinAssist: React.FC<{
     const [prompt, setPrompt] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const chatEndRef = React.useRef<HTMLDivElement>(null);
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1275,6 +1290,10 @@ const FinAssist: React.FC<{
         onNewMessage(botMessage);
         setIsLoading(false);
     };
+    
+    if (!isOnline) {
+        return null;
+    }
 
     return (
         <>
@@ -1336,11 +1355,6 @@ const FinAssist: React.FC<{
     );
 };
 
-// --- DB KEYS ---
-const PROFILES_DB_KEY = 'controlFin_profiles_db';
-const PASSWORDS_DB_KEY = 'controlFin_passwords_db';
-const USER_DATA_PREFIX = 'controlFinData_';
-
 // --- MAIN APP COMPONENT ---
 const App: React.FC = () => {
     const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -1373,10 +1387,10 @@ const App: React.FC = () => {
         }
       }, []);
 
-    // Load all user profiles and passwords from localStorage on initial render
+    // Load all user profiles and passwords from storage on initial render
     useEffect(() => {
-        const savedProfiles = JSON.parse(localStorage.getItem(PROFILES_DB_KEY) || '{}');
-        const savedPasswords = JSON.parse(localStorage.getItem(PASSWORDS_DB_KEY) || '{}');
+        const savedProfiles = storageService.getAllProfiles();
+        const savedPasswords = storageService.getAllPasswords();
 
         // Ensure admin user exists
         if (!savedProfiles['admin']) {
@@ -1388,8 +1402,8 @@ const App: React.FC = () => {
                 registeredAt: new Date().toISOString() 
             };
             savedPasswords['admin'] = 'admin'; // In a real app, this would be hashed
-            localStorage.setItem(PROFILES_DB_KEY, JSON.stringify(savedProfiles));
-            localStorage.setItem(PASSWORDS_DB_KEY, JSON.stringify(savedPasswords));
+            storageService.saveAllProfiles(savedProfiles);
+            storageService.saveAllPasswords(savedPasswords);
         }
 
         setUserProfiles(savedProfiles);
@@ -1400,9 +1414,9 @@ const App: React.FC = () => {
     // Load specific user financial data when currentUser changes
     useEffect(() => {
         if (currentUser) {
-            const savedData = localStorage.getItem(`${USER_DATA_PREFIX}${currentUser.username}`);
+            const savedData = storageService.getUserData(currentUser.username);
             if (savedData) {
-                const parsedData = JSON.parse(savedData);
+                const parsedData = savedData; // Data is already parsed by service
                 const categoriesWithIcons = parsedData.categories.map((c: Category) => ({
                     ...c,
                     icon: c.icon ?? INITIAL_CATEGORIES.find(ic => ic.name === c.name)?.icon ?? 'question_mark_circle'
@@ -1421,10 +1435,10 @@ const App: React.FC = () => {
         }
     }, [currentUser]);
 
-    // Save user's financial data to localStorage when it changes
+    // Save user's financial data to storage when it changes
     useEffect(() => {
         if (currentUser) {
-            localStorage.setItem(`${USER_DATA_PREFIX}${currentUser.username}`, JSON.stringify(userData));
+            storageService.saveUserData(currentUser.username, userData);
         }
     }, [userData, currentUser]);
 
@@ -1471,9 +1485,9 @@ const App: React.FC = () => {
         setUserProfiles(updatedProfiles);
         setUserPasswords(updatedPasswords);
 
-        localStorage.setItem(PROFILES_DB_KEY, JSON.stringify(updatedProfiles));
-        localStorage.setItem(PASSWORDS_DB_KEY, JSON.stringify(updatedPasswords));
-        localStorage.setItem(`${USER_DATA_PREFIX}${username}`, JSON.stringify(DEFAULT_USER_DATA));
+        storageService.saveAllProfiles(updatedProfiles);
+        storageService.saveAllPasswords(updatedPasswords);
+        storageService.saveUserData(username, DEFAULT_USER_DATA);
         
         return verificationCode;
     };
@@ -1487,7 +1501,7 @@ const App: React.FC = () => {
         const verifiedProfile: UserProfile = { ...profile, isVerified: true, verificationCode: undefined };
         const updatedProfiles = { ...userProfiles, [username]: verifiedProfile };
         setUserProfiles(updatedProfiles);
-        localStorage.setItem(PROFILES_DB_KEY, JSON.stringify(updatedProfiles));
+        storageService.saveAllProfiles(updatedProfiles);
         
         setCurrentUser(verifiedProfile);
     };
@@ -1505,7 +1519,7 @@ const App: React.FC = () => {
         const updatedProfiles = { ...userProfiles, [username]: updatedProfile };
         
         setUserProfiles(updatedProfiles);
-        localStorage.setItem(PROFILES_DB_KEY, JSON.stringify(updatedProfiles));
+        storageService.saveAllProfiles(updatedProfiles);
 
         return resetCode;
     };
@@ -1527,8 +1541,8 @@ const App: React.FC = () => {
 
         setUserProfiles(updatedProfiles);
         setUserPasswords(updatedPasswords);
-        localStorage.setItem(PROFILES_DB_KEY, JSON.stringify(updatedProfiles));
-        localStorage.setItem(PASSWORDS_DB_KEY, JSON.stringify(updatedPasswords));
+        storageService.saveAllProfiles(updatedProfiles);
+        storageService.saveAllPasswords(updatedPasswords);
     };
 
     const handleLogout = () => {
@@ -1647,7 +1661,7 @@ const App: React.FC = () => {
         const updatedProfiles = { ...userProfiles, [currentUser.username]: updatedProfile };
         setUserProfiles(updatedProfiles);
         setCurrentUser(updatedProfile);
-        localStorage.setItem(PROFILES_DB_KEY, JSON.stringify(updatedProfiles));
+        storageService.saveAllProfiles(updatedProfiles);
     };
     
     const handleDeleteUser = (usernameToDelete: string) => {
@@ -1660,9 +1674,9 @@ const App: React.FC = () => {
         setUserProfiles(updatedProfiles);
         setUserPasswords(updatedPasswords);
         
-        localStorage.setItem(PROFILES_DB_KEY, JSON.stringify(updatedProfiles));
-        localStorage.setItem(PASSWORDS_DB_KEY, JSON.stringify(updatedPasswords));
-        localStorage.removeItem(`${USER_DATA_PREFIX}${usernameToDelete}`);
+        storageService.saveAllProfiles(updatedProfiles);
+        storageService.saveAllPasswords(updatedPasswords);
+        storageService.removeUserData(usernameToDelete);
     };
 
     const handleUpdateCurrency = (currency: string) => setUserData(prev => ({ ...prev, currency }));

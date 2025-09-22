@@ -2,7 +2,7 @@ const CACHE_NAME = 'controlfin-cache-v1';
 const CORE_ASSETS = [
   './',
   './index.html',
-  './index.tsx',
+  './bundle.js',
   './manifest.json',
   './icon-192x192.png',
   './icon-512x512.png',

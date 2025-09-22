@@ -28,6 +28,10 @@ export const getFinAssistResponse = async (
   history: ChatMessage[],
   transactions: Transaction[]
 ): Promise<string> => {
+  if (!navigator.onLine) {
+    return "O FinAssist não está disponível offline. Conecte-se à internet para usar este recurso.";
+  }
+  
   if (!API_KEY) {
     return "Chave da API não configurada. Por favor, configure-a em seu ambiente.";
   }
