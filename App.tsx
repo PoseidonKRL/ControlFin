@@ -734,6 +734,8 @@ const ReportsPage: React.FC<{ userData: UserData }> = ({ userData }) => {
                         <div className="h-96 w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
+                                    {/* FIX: Suppress TypeScript error for the Pie component's 'activeIndex' prop, which is missing from the installed type definitions. */}
+                                    {/* @ts-ignore */}
                                     <Pie
                                         activeIndex={activeIndex}
                                         activeShape={renderActiveShape}
