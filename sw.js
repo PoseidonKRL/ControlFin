@@ -4,10 +4,7 @@ const CORE_ASSETS = [
   './index.html',
   './bundle.js',
   './manifest.json',
-  './logo.svg',
-  'https://cdn.tailwindcss.com',
-  'https://rsms.me/inter/inter.css',
-  'https://www.transparenttextures.com/patterns/stardust.png'
+  './logo.svg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -41,24 +38,22 @@ self.addEventListener('fetch', (event) => {
       return;
   }
 
+  // Cache-first strategy for all GET requests
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
-        const cachedResponse = await cache.match(event.request);
-
-        if (cachedResponse) {
-            return cachedResponse;
+      const cachedResponse = await cache.match(event.request);
+      
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        // If the request is successful, update the cache
+        if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            cache.put(event.request, responseToCache);
         }
+        return networkResponse;
+      });
 
-        try {
-            const networkResponse = await fetch(event.request);
-            if (networkResponse && networkResponse.status === 200) {
-                const responseToCache = networkResponse.clone();
-                await cache.put(event.request, responseToCache);
-            }
-            return networkResponse;
-        } catch (error) {
-            console.error('Fetch failed:', error);
-        }
+      // Return cached response if available, otherwise wait for network
+      return cachedResponse || fetchPromise;
     })
   );
 });

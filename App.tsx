@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, Sector } from 'recharts';
 import { UserData, Page, Transaction, TransactionType, Category, ChatMessage, UserProfile } from './types';
@@ -738,7 +739,9 @@ const ReportsPage: React.FC<{ userData: UserData }> = ({ userData }) => {
                                     {/* FIX: The @types/recharts package may have incorrect typings for the Pie component,
                                         missing the 'activeIndex' prop. Using @ts-ignore to bypass this typing issue,
                                         as the component works as expected at runtime with this prop. */}
-                                    {/* @ts-ignore */}
+                                    {
+                                      // @ts-ignore
+                                    }
                                     <Pie
                                         activeIndex={activeIndex}
                                         activeShape={renderActiveShape}
