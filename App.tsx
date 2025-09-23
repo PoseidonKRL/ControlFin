@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, Sector } from 'recharts';
 import { UserData, Page, Transaction, TransactionType, Category, ChatMessage, UserProfile } from './types';
@@ -595,70 +592,10 @@ const TransactionsPage: React.FC<{
                         </div>
                     </td>
                 </tr>
-                {hasSubItems && isExpanded && t.subItems!.map(sub => renderTransactionRow(sub, true))}
-            </React.Fragment>
-        );
-    };
-
-    const renderTransactionCard = (t: Transaction, isSubItem: boolean = false) => {
-        const category = categories.find(c => c.name === t.category);
-        const hasSubItems = t.subItems && t.subItems.length > 0;
-        const isExpanded = expanded[t.id];
-
-        return (
-            <React.Fragment key={t.id}>
-                <div className={`p-4 rounded-lg ${!isSubItem ? 'bg-[var(--color-bg-secondary)]' : 'bg-[var(--color-bg-secondary)]/50 ml-4'}`}>
-                    <div className="flex justify-between items-start gap-3">
-                        <div className="flex items-center gap-3 flex-grow min-w-0">
-                            <span className="p-2 bg-[var(--color-border)] rounded-lg flex-shrink-0">
-                                <Icon name={category?.icon} className="h-5 w-5" />
-                            </span>
-                            <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <p className="font-medium text-[var(--color-text-primary)] truncate">{t.description}</p>
-                                    {isSubItem && t.notes && (
-                                        <button 
-                                            onClick={() => onShowNote(t.notes!)} 
-                                            title="Ver anotação" 
-                                            className="text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] transition-colors flex-shrink-0"
-                                            aria-label="Ver anotação"
-                                        >
-                                            <Icon name="document_text" className="h-4 w-4" />
-                                        </button>
-                                    )}
-                                </div>
-                                <p className="text-sm text-[var(--color-text-secondary)]">{new Date(t.date).toLocaleDateString('pt-BR')}</p>
-                            </div>
-                        </div>
-                        <p className={`font-semibold text-right flex-shrink-0 ${t.type === TransactionType.INCOME ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>
-                            {t.type === TransactionType.INCOME ? '+' : '-'} {formatCurrency(t.amount, currency)}
-                        </p>
-                    </div>
-                    
-                    <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-[var(--color-border)]/50">
-                        {hasSubItems && (
-                            <button onClick={() => toggleExpand(t.id)} className="p-1 rounded-full hover:bg-[var(--color-border)] mr-auto flex items-center gap-1 text-[var(--color-text-secondary)] text-sm">
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
-                                {isExpanded ? 'Ocultar' : 'Mostrar'} subitens ({t.subItems!.length})
-                            </button>
-                        )}
-                        {!isSubItem && (
-                            <Button variant="secondary" className="p-2" onClick={() => onAddTransaction(t.id)} title="Adicionar Subitem">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                            </Button>
-                        )}
-                        <Button variant="secondary" className="p-2" onClick={() => onEditTransaction(t)} title="Editar">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" /></svg>
-                        </Button>
-                        <Button variant="danger" className="p-2" onClick={() => onDeleteTransaction(t.id)} title="Excluir">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </Button>
-                    </div>
-                </div>
-                {hasSubItems && isExpanded && (
-                    <div className="space-y-2 mt-2">
-                        {t.subItems!.map(sub => renderTransactionCard(sub, true))}
-                    </div>
+                {!isSubItem && hasSubItems && isExpanded && (
+                    <>
+                        {t.subItems!.map(subItem => renderTransactionRow(subItem, true))}
+                    </>
                 )}
             </React.Fragment>
         );
@@ -666,12 +603,12 @@ const TransactionsPage: React.FC<{
 
     return (
         <div className="p-4 md:p-8 space-y-6">
-            <div className="flex flex-wrap justify-between items-center gap-4">
+             <div className="flex flex-wrap justify-between items-center gap-4">
                 <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)]">Transações</h1>
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                     {availableMonths.length > 0 && (
+                <div className="flex items-center gap-4">
+                    {availableMonths.length > 0 && (
                         <div className="w-full sm:w-auto sm:max-w-xs">
-                            <Select
+                             <Select
                                 value={selectedMonth}
                                 onChange={(e) => onMonthChange(e.target.value)}
                                 aria-label="Filtrar por mês"
@@ -685,212 +622,149 @@ const TransactionsPage: React.FC<{
                             </Select>
                         </div>
                     )}
-                    <Button onClick={() => onAddTransaction()}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                        Adicionar Transação
+                    <Button onClick={() => onAddTransaction()} variant="primary" className="whitespace-nowrap">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                        Adicionar
                     </Button>
                 </div>
             </div>
-
-            <Card>
-                 {/* Mobile View: Cards */}
-                <div className="space-y-4 md:hidden">
-                    {filteredTransactions.length > 0 ? (
-                        filteredTransactions.map(t => renderTransactionCard(t))
-                    ) : (
-                        <p className="text-center py-10 text-[var(--color-text-secondary)]">
-                            Nenhuma transação encontrada para este período.
-                        </p>
-                    )}
-                </div>
-
-                {/* Desktop View: Table */}
-                <div className="overflow-x-auto hidden md:block">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="border-b border-[var(--color-border)]">
-                                <th className="py-3 px-4 font-semibold text-[var(--color-text-secondary)]">Descrição</th>
-                                <th className="py-3 px-4 font-semibold text-[var(--color-text-secondary)]">Data</th>
-                                <th className="py-3 px-4 font-semibold text-[var(--color-text-secondary)] text-right">Valor</th>
-                                <th className="py-3 px-4"></th>
+            
+            <div className="overflow-x-auto bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl">
+                 <table className="min-w-full text-sm">
+                    <thead className="border-b border-[var(--color-border)]">
+                        <tr>
+                            <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">Descrição</th>
+                            <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">Data</th>
+                            <th className="text-right font-semibold text-[var(--color-text-secondary)] p-4">Valor</th>
+                            <th className="text-right font-semibold text-[var(--color-text-secondary)] p-4">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredTransactions.filter(t => !t.parentId).length > 0 ? (
+                           filteredTransactions.filter(t => !t.parentId).map(t => renderTransactionRow(t))
+                        ) : (
+                            <tr>
+                                <td colSpan={4} className="text-center p-8 text-[var(--color-text-secondary)]">
+                                    Nenhuma transação encontrada para este período.
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {filteredTransactions.length > 0 ? (
-                                filteredTransactions.map(t => renderTransactionRow(t))
-                            ) : (
-                                <tr>
-                                    <td colSpan={4} className="text-center py-10 text-[var(--color-text-secondary)]">
-                                        Nenhuma transação encontrada para este período.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 };
 
 // --- REPORTS PAGE ---
-const ReportsPage: React.FC<{
-    userData: UserData;
-    selectedMonth: string;
-    onMonthChange: (month: string) => void;
-    availableMonths: string[];
-    formatMonthYear: (month: string) => string;
-}> = ({ userData, selectedMonth, onMonthChange, availableMonths, formatMonthYear }) => {
-    const { categories, theme, currency } = userData;
+const ReportsPage: React.FC<{ userData: UserData }> = ({ userData }) => {
+    const { transactions, currency, theme } = userData;
+    const { expenseByCategoryData, monthlyBalanceData } = processChartData(transactions);
+    const [activeIndex, setActiveIndex] = useState(0);
 
-    const filteredTransactions = useMemo(() => {
-        if (selectedMonth === 'all') {
-            return userData.transactions;
-        }
-        return userData.transactions.filter(t => t.date.startsWith(selectedMonth));
-    }, [userData.transactions, selectedMonth]);
-
-    const { monthlyBalanceData, expenseByCategoryData } = processChartData(filteredTransactions);
-    
-    // FIX: The 'activeIndex' prop on recharts' Pie component is causing a TypeScript error,
-    // likely due to outdated type definitions. To work around this without suppressing the error,
-    // we now manually handle rendering the active sector. onMouseEnter provides the necessary
-    // props for the hovered slice, which we then use to render an enlarged <Sector /> component on top.
-    const [activeIndex, setActiveIndex] = useState<number>(-1);
-    const [activeSliceProps, setActiveSliceProps] = useState<any>(null);
-
-    const onPieEnter = useCallback((data: any, index: number) => {
+    const onPieEnter = useCallback((_: any, index: number) => {
         setActiveIndex(index);
-        setActiveSliceProps(data);
     }, []);
-
-    const onPieLeave = useCallback(() => {
-        setActiveIndex(-1);
-        setActiveSliceProps(null);
-    }, []);
-
-    const PIE_COLORS = theme === 'galaxy'
-        ? ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00c49f', '#ffbb28']
-        : ['#3b82f6', '#16a34a', '#f59e0b', '#ef4444', '#6366f1', '#10b981', '#f97316'];
     
-    const chartColors = {
-        barSuccess: theme === 'galaxy' ? '#4ade80' : '#16a34a',
-        barDanger: theme === 'galaxy' ? '#f87171' : '#ef4444',
-        text: theme === 'galaxy' ? '#94a3b8' : '#6b7280',
-    };
-
+    const chartColors = theme === 'galaxy' 
+        ? ['#9333ea', '#3b82f6', '#10b981', '#f97316', '#ef4444', '#6366f1', '#d946ef', '#0ea5e9']
+        : ['#2563eb', '#16a34a', '#db2777', '#f59e0b', '#dc2626', '#4f46e5', '#9333ea', '#0284c7'];
+        
+    const chartText = theme === 'galaxy' ? '#94a3b8' : '#6b7280';
+    
     const tooltipColors = {
         background: theme === 'galaxy' ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
         border: theme === 'galaxy' ? '#475569' : '#e5e7eb',
         label: theme === 'galaxy' ? '#e2e8f0' : '#1f2937',
-        legend: theme === 'galaxy' ? '#cbd5e1' : '#4b5563',
     };
 
-    const RADIAN = Math.PI / 180;
-    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
-        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-        const x = cx + radius * Math.cos(-midAngle * RADIAN);
-        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const renderActiveShape = (props: any) => {
+      const RADIAN = Math.PI / 180;
+      const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+      const sin = Math.sin(-RADIAN * midAngle);
+      const cos = Math.cos(-RADIAN * midAngle);
+      const sx = cx + (outerRadius + 10) * cos;
+      const sy = cy + (outerRadius + 10) * sin;
+      const mx = cx + (outerRadius + 30) * cos;
+      const my = cy + (outerRadius + 30) * sin;
+      const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+      const ey = my;
+      const textAnchor = cos >= 0 ? 'start' : 'end';
 
-        const category = expenseByCategoryData[index];
-        const categoryIcon = categories.find(c => c.name === category.name)?.icon;
-        
-        const percentage = (percent ?? 0) * 100;
-        
-        if (percentage < 5) return null;
-
-        return (
-            <g>
-                <foreignObject x={x - 16} y={y - 16} width={32} height={32}>
-                    <div className="bg-[var(--color-bg-primary)]/50 p-1.5 rounded-full flex items-center justify-center">
-                        <Icon name={categoryIcon} className="w-5 h-5 text-[var(--color-text-primary)]" />
-                    </div>
-                </foreignObject>
-                 <text x={x} y={y + 28} fill="var(--color-text-primary)" textAnchor="middle" dominantBaseline="central" className="text-xs font-semibold">
-                    {`${percentage.toFixed(0)}%`}
-                </text>
-            </g>
-        );
+      return (
+        <g>
+          <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="font-bold text-lg">
+            {payload.name}
+          </text>
+          <Sector
+            cx={cx}
+            cy={cy}
+            innerRadius={innerRadius}
+            outerRadius={outerRadius}
+            startAngle={startAngle}
+            endAngle={endAngle}
+            fill={fill}
+          />
+          <Sector
+            cx={cx}
+            cy={cy}
+            startAngle={startAngle}
+            endAngle={endAngle}
+            innerRadius={outerRadius + 6}
+            outerRadius={outerRadius + 10}
+            fill={fill}
+          />
+          <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
+          <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
+          <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill={chartText} className="text-sm">{`${formatCurrency(value, currency)}`}</text>
+          <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={18} textAnchor={textAnchor} fill={chartText} className="text-xs">
+            {`(${(percent * 100).toFixed(2)}%)`}
+          </text>
+        </g>
+      );
     };
 
     return (
-        <div className="p-4 md:p-8 space-y-6 md:space-y-8">
-            <div className="flex flex-wrap justify-between items-center gap-4">
-                <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)]">Relatórios</h1>
-                {availableMonths.length > 0 && (
-                    <div className="w-full sm:w-auto sm:max-w-xs">
-                        <Select
-                            value={selectedMonth}
-                            onChange={(e) => onMonthChange(e.target.value)}
-                            aria-label="Filtrar por mês"
-                        >
-                            <option value="all">Todos os Meses</option>
-                            {availableMonths.map(month => (
-                                <option key={month} value={month}>
-                                    {formatMonthYear(month)}
-                                </option>
-                            ))}
-                        </Select>
-                    </div>
-                )}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
+        <div className="p-4 md:p-8 space-y-8">
+            <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)]">Relatórios</h1>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                 <Card>
                     <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Despesas por Categoria</h2>
-                     <div className="h-80 md:h-96">
-                        {expenseByCategoryData.length > 0 ? (
+                    {expenseByCategoryData.length > 0 ? (
+                        <div className="h-96 w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
-                                        onMouseEnter={onPieEnter}
-                                        onMouseLeave={onPieLeave}
+                                        activeIndex={activeIndex}
+                                        activeShape={renderActiveShape}
                                         data={expenseByCategoryData}
                                         cx="50%"
                                         cy="50%"
-                                        labelLine={false}
-                                        label={renderCustomizedLabel}
-                                        outerRadius={120}
+                                        innerRadius={80}
+                                        outerRadius={110}
                                         fill="#8884d8"
                                         dataKey="value"
+                                        onMouseEnter={onPieEnter}
                                     >
                                         {expenseByCategoryData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={activeIndex === index ? 'transparent' : PIE_COLORS[index % PIE_COLORS.length]} />
+                                            <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                                         ))}
                                     </Pie>
-                                    {activeSliceProps && (
-                                        <Sector
-                                            {...activeSliceProps}
-                                            outerRadius={activeSliceProps.outerRadius + 8}
-                                        />
-                                    )}
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: tooltipColors.background,
-                                            borderColor: tooltipColors.border,
-                                            backdropFilter: 'blur(4px)',
-                                            borderRadius: '0.75rem',
-                                        }}
-                                        labelStyle={{ color: tooltipColors.label }}
-                                        formatter={(value: number, name: string) => [formatCurrency(value, currency), name]}
-                                    />
-                                    <Legend wrapperStyle={{ color: tooltipColors.legend, paddingTop: '20px' }} />
                                 </PieChart>
                             </ResponsiveContainer>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-[var(--color-text-secondary)]">
-                                Nenhuma despesa encontrada para este período.
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        <p className="text-center p-8 text-[var(--color-text-secondary)]">Não há dados de despesas para exibir.</p>
+                    )}
                 </Card>
                 <Card>
-                    <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Saldo Mensal</h2>
-                     <div className="h-80 md:h-96">
-                        {monthlyBalanceData.length > 0 ? (
+                    <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Evolução do Saldo Mensal</h2>
+                     {monthlyBalanceData.length > 0 ? (
+                        <div className="h-96">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={monthlyBalanceData} margin={{ top: 20, right: 30, left: 20, bottom: 25 }}>
-                                    <XAxis dataKey="name" stroke={chartColors.text} angle={-30} textAnchor="end" height={60} tick={{ fontSize: 12 }} />
-                                    <YAxis stroke={chartColors.text} tickFormatter={(value) => formatCurrency(value as number, currency)}/>
+                                <BarChart data={monthlyBalanceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                    <XAxis dataKey="name" stroke={chartText} />
+                                    <YAxis stroke={chartText} tickFormatter={(value) => formatCurrency(value as number, currency)} />
                                     <Tooltip
                                         contentStyle={{
                                             backgroundColor: tooltipColors.background,
@@ -899,23 +773,26 @@ const ReportsPage: React.FC<{
                                             borderRadius: '0.75rem',
                                         }}
                                         labelStyle={{ color: tooltipColors.label }}
-                                        formatter={(value: number) => formatCurrency(value, currency)}
+                                        formatter={(value: number) => [formatCurrency(value, currency), 'Saldo']}
                                     />
-                                    <Legend wrapperStyle={{ color: tooltipColors.legend }} />
-                                    <Bar dataKey="Saldo" radius={[4, 4, 0, 0]} animationDuration={800}>
+                                    <Bar dataKey="Saldo" animationDuration={800}>
                                         {monthlyBalanceData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.Saldo >= 0 ? chartColors.barSuccess : chartColors.barDanger} />
+                                            <Cell key={`cell-${index}`} fill={entry.Saldo >= 0 ? chartColors[2] : chartColors[4]} />
                                         ))}
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-[var(--color-text-secondary)]">
-                                Nenhum dado de saldo encontrado para este período.
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                     ) : (
+                        <p className="text-center p-8 text-[var(--color-text-secondary)]">Não há dados de saldo para exibir.</p>
+                     )}
                 </Card>
+            </div>
+            <div className="flex justify-end">
+                <Button onClick={() => exportToCSV(transactions, currency)} variant="secondary">
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Exportar para CSV
+                </Button>
             </div>
         </div>
     );
@@ -924,934 +801,738 @@ const ReportsPage: React.FC<{
 // --- SETTINGS PAGE ---
 const SettingsPage: React.FC<{
     userData: UserData;
+    onUpdateSettings: (newSettings: Partial<UserData>) => void;
     userProfile: UserProfile;
-    onUpdateCategories: (categories: Category[]) => void;
-    onUpdateCurrency: (currency: string) => void;
-    onDeleteCategory: (categoryId: string) => void;
-    onUpdateTheme: (theme: 'galaxy' | 'minimalist') => void;
-    onUpdateProfile: (profile: Partial<UserProfile>) => void;
-}> = ({ userData, userProfile, onUpdateCategories, onUpdateCurrency, onDeleteCategory, onUpdateTheme, onUpdateProfile }) => {
-    const { categories, currency, theme } = userData;
-    const [newCategoryName, setNewCategoryName] = useState('');
-    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-
-    const [isIconPickerOpen, setIconPickerOpen] = useState(false);
-    const [categoryForIconChange, setCategoryForIconChange] = useState<Category | null>(null);
-
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [editingDisplayName, setEditingDisplayName] = useState(userProfile.displayName);
+    onUpdateProfile: (newProfile: Partial<UserProfile>) => void;
+}> = ({ userData, onUpdateSettings, userProfile, onUpdateProfile }) => {
+    const [currency, setCurrency] = useState(userData.currency);
+    const [theme, setTheme] = useState(userData.theme);
+    const [displayName, setDisplayName] = useState(userProfile.displayName);
+    const [email, setEmail] = useState(userProfile.email);
+    const [profilePic, setProfilePic] = useState(userProfile.profilePicture);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleAddCategory = () => {
-        if (newCategoryName.trim() && !categories.some(c => c.name.toLowerCase() === newCategoryName.trim().toLowerCase())) {
-            // FIX: Explicitly type `newCategory` as `Category` to align with the `onUpdateCategories` signature.
-            // This resolves a subtle type inference issue where the compiler might expect a more specific type.
-            const newCategory: Category = {
-                id: `cat${Date.now()}`,
-                name: newCategoryName.trim(),
-                icon: 'question_mark_circle', // Default icon
+    
+    const handleSave = () => {
+        onUpdateSettings({ currency, theme });
+        onUpdateProfile({ displayName, email, profilePicture: profilePic });
+        // In a real app, you'd show a success toast/message
+        alert('Configurações salvas!');
+    };
+    
+    const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfilePic(reader.result as string);
             };
-            onUpdateCategories([...categories, newCategory]);
-            setNewCategoryName('');
+            reader.readAsDataURL(file);
         }
     };
-
-    const handleUpdateCategory = (categoryToUpdate: Category) => {
-        if(categoryToUpdate.name.trim()){
-            const updatedCategories = categories.map(c =>
-                c.id === categoryToUpdate.id ? categoryToUpdate : c
-            );
-            onUpdateCategories(updatedCategories);
-            setEditingCategory(null);
-        }
-    };
-
-    const openIconPicker = (category: Category) => {
-        setCategoryForIconChange(category);
-        setIconPickerOpen(true);
-    };
-
-    const handleSelectIcon = (iconName: string) => {
-        if (categoryForIconChange) {
-            const updatedCategories = categories.map(c =>
-                c.id === categoryForIconChange.id ? { ...c, icon: iconName } : c
-            );
-            onUpdateCategories(updatedCategories);
-        }
-        setIconPickerOpen(false);
-        setCategoryForIconChange(null);
-    };
-
-    const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = () => {
-            const base64String = reader.result as string;
-            onUpdateProfile({ profilePicture: base64String });
-        };
-        reader.readAsDataURL(file);
-    };
-
-    const handleSaveDisplayName = () => {
-        if (editingDisplayName.trim()) {
-            onUpdateProfile({ displayName: editingDisplayName.trim() });
-            setIsEditingName(false);
-        }
-    };
-
+    
     return (
-        <div className="p-4 md:p-8 space-y-6 md:space-y-8">
+        <div className="p-4 md:p-8 space-y-8 max-w-4xl mx-auto">
             <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)]">Configurações</h1>
             
             <Card>
-                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Perfil</h2>
-                <div className="flex flex-col sm:flex-row items-center gap-6">
-                    <div className="relative">
-                        <input type="file" ref={fileInputRef} onChange={handleProfilePictureChange} accept="image/*" className="hidden" />
-                        {userProfile.profilePicture ? (
-                            <img src={userProfile.profilePicture} alt="Foto de perfil" className="w-24 h-24 rounded-full object-cover" />
-                        ) : (
-                            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-purple-500 to-cyan-400 flex items-center justify-center font-bold text-slate-900 text-5xl">
-                                {userProfile.displayName.charAt(0)}
-                            </div>
-                        )}
-                        <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-full text-[var(--color-text-primary)] hover:bg-[var(--color-accent)] transition-colors" title="Trocar foto">
-                            <Icon name="photo" className="h-5 w-5" />
-                        </button>
+                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] border-b border-[var(--color-border)] pb-4 mb-6">Perfil do Usuário</h2>
+                <div className="flex flex-col md:flex-row items-start gap-8">
+                    <div className="flex-shrink-0">
+                         <div className="relative w-32 h-32">
+                             {profilePic ? (
+                                <img src={profilePic} alt="Foto de perfil" className="w-full h-full rounded-full object-cover" />
+                             ) : (
+                                <div className="w-full h-full rounded-full bg-gradient-to-tr from-purple-500 to-cyan-400 flex items-center justify-center font-bold text-slate-900 text-5xl">
+                                    {displayName.charAt(0)}
+                                </div>
+                             )}
+                             <button 
+                                 onClick={() => fileInputRef.current?.click()}
+                                 className="absolute bottom-0 right-0 p-2 bg-[var(--color-accent)] text-white rounded-full hover:bg-[var(--color-accent-hover)] transition-colors"
+                                 title="Alterar foto de perfil"
+                             >
+                                <Icon name="photo" className="w-5 h-5"/>
+                             </button>
+                             <input type="file" ref={fileInputRef} onChange={handleProfilePicChange} accept="image/*" className="hidden" />
+                         </div>
                     </div>
-                    <div className="flex-grow text-center sm:text-left">
-                        {isEditingName ? (
-                            <div className="flex items-center gap-2">
-                                <Input value={editingDisplayName} onChange={(e) => setEditingDisplayName(e.target.value)} autoFocus onKeyDown={(e) => e.key === 'Enter' && handleSaveDisplayName()}/>
-                                <Button onClick={handleSaveDisplayName} className="p-2"><Icon name="check" className="h-5 w-5"/></Button>
-                                <Button variant="secondary" onClick={() => { setIsEditingName(false); setEditingDisplayName(userProfile.displayName); }} className="p-2"><Icon name="x_mark" className="h-5 w-5"/></Button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-3 justify-center sm:justify-start">
-                                <h3 className="text-2xl font-bold">{userProfile.displayName}</h3>
-                                <Button variant="secondary" className="p-2" onClick={() => setIsEditingName(true)} title="Editar nome">
-                                    <Icon name="pencil" className="h-5 w-5" />
-                                </Button>
-                            </div>
-                        )}
-                        <p className="text-[var(--color-text-secondary)]">@{userProfile.username} &middot; {userProfile.email}</p>
-                    </div>
-                </div>
-            </Card>
-
-             <Card>
-                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Tema do Aplicativo</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Galaxy Theme */}
-                    <div onClick={() => onUpdateTheme('galaxy')} className={`cursor-pointer rounded-lg p-4 border-2 ${theme === 'galaxy' ? 'border-[var(--color-accent)]' : 'border-transparent'}`}>
-                        <div className="flex justify-between items-center mb-2">
-                            <h3 className="font-semibold text-lg">Galaxy</h3>
-                             {theme === 'galaxy' && <div className="w-5 h-5 rounded-full bg-[var(--color-accent)] flex items-center justify-center text-white"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg></div>}
-                        </div>
-                        <div className="h-24 rounded-md bg-[#0f172a] border border-[#334155] p-3 flex flex-col justify-between">
-                             <div className="flex justify-between">
-                                <span className="text-xs text-[#94a3b8]">Escuro & Vibrante</span>
-                                <div className="w-6 h-4 rounded bg-[#9333ea]"></div>
-                             </div>
-                             <div className="w-full h-8 rounded bg-[#1e293b] border border-[#334155] flex items-center p-1.5">
-                                <div className="w-1/2 h-full rounded-sm bg-[#4ade80]"></div>
-                                <div className="w-1/2 h-full rounded-sm bg-[#f87171]"></div>
-                             </div>
-                        </div>
-                    </div>
-                     {/* Minimalist Theme */}
-                    <div onClick={() => onUpdateTheme('minimalist')} className={`cursor-pointer rounded-lg p-4 border-2 ${theme === 'minimalist' ? 'border-[var(--color-accent)]' : 'border-transparent'}`}>
-                         <div className="flex justify-between items-center mb-2">
-                            <h3 className="font-semibold text-lg">Minimalista</h3>
-                            {theme === 'minimalist' && <div className="w-5 h-5 rounded-full bg-[var(--color-accent)] flex items-center justify-center text-white"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg></div>}
-                        </div>
-                        <div className="h-24 rounded-md bg-[#f9fafb] border border-[#e5e7eb] p-3 flex flex-col justify-between">
-                             <div className="flex justify-between">
-                                <span className="text-xs text-[#6b7280]">Claro & Limpo</span>
-                                <div className="w-6 h-4 rounded bg-[#2563eb]"></div>
-                             </div>
-                             <div className="w-full h-8 rounded bg-[#ffffff] border border-[#e5e7eb] flex items-center p-1.5">
-                                <div className="w-1/2 h-full rounded-sm bg-[#16a34a]"></div>
-                                <div className="w-1/2 h-full rounded-sm bg-[#ef4444]"></div>
-                             </div>
+                    <div className="flex-grow space-y-4 w-full">
+                        <Input label="Nome de Exibição" value={displayName} onChange={e => setDisplayName(e.target.value)} />
+                        <Input label="E-mail" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+                        <div>
+                            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">Usuário</label>
+                            <p className="w-full bg-[var(--color-bg-primary)] border border-transparent rounded-lg px-3 py-2 text-[var(--color-text-secondary)]">
+                                @{userProfile.username} (não pode ser alterado)
+                            </p>
                         </div>
                     </div>
                 </div>
             </Card>
 
             <Card>
-                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Gerenciar Categorias</h2>
-                <div className="space-y-3">
-                    {categories.map(cat => (
-                        <div key={cat.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-[var(--color-bg-secondary)] p-3 rounded-lg">
-                           {editingCategory?.id === cat.id ? (
-                                <div className="flex flex-wrap items-center gap-2 flex-grow w-full">
-                                    <button onClick={() => openIconPicker(cat)} className="p-2 rounded-md bg-[var(--color-border)] hover:bg-[var(--color-accent)] transition-colors">
-                                        <Icon name={cat.icon} className="h-6 w-6" />
-                                    </button>
-                                    <Input
-                                        type="text"
-                                        value={editingCategory.name}
-                                        onChange={(e) => setEditingCategory(prev => (prev ? { ...prev, name: e.target.value } : null))}
-                                        className="flex-grow min-w-[120px]"
-                                        autoFocus
-                                    />
-                                     <div className='flex gap-2 ml-auto'>
-                                        <Button onClick={() => handleUpdateCategory(editingCategory)}>Salvar</Button>
-                                        <Button variant="secondary" onClick={() => setEditingCategory(null)}>Cancelar</Button>
-                                     </div>
-                                </div>
-                           ) : (
-                            <>
-                                <div className="flex items-center gap-3">
-                                     <button onClick={() => openIconPicker(cat)} className="p-2 rounded-md bg-[var(--color-border)] hover:bg-[var(--color-accent)] transition-colors">
-                                        <Icon name={cat.icon} className="h-6 w-6" />
-                                     </button>
-                                    <span className="text-[var(--color-text-primary)]">{cat.name}</span>
-                                </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                    <Button variant="secondary" className="p-2" onClick={() => setEditingCategory(cat)} title="Editar">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" /></svg>
-                                    </Button>
-                                    <Button variant="danger" className="p-2" onClick={() => onDeleteCategory(cat.id)} title="Excluir">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </Button>
-                                </div>
-                            </>
-                           )}
-                        </div>
-                    ))}
-                </div>
-                <div className="flex gap-2 mt-4 pt-4 border-t border-[var(--color-border)]">
-                    <Input
-                        type="text"
-                        placeholder="Nova categoria..."
-                        value={newCategoryName}
-                        onChange={(e) => setNewCategoryName(e.target.value)}
-                        className="flex-grow"
-                    />
-                    <Button onClick={handleAddCategory}>Adicionar</Button>
-                </div>
-            </Card>
-
-            <Card>
-                 <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Configurações Gerais</h2>
-                 <div className="max-w-xs">
-                    <Select label="Moeda" value={currency} onChange={e => onUpdateCurrency(e.target.value)}>
-                        <option value="BRL">Real Brasileiro (BRL)</option>
-                        <option value="USD">Dólar Americano (USD)</option>
-                        <option value="EUR">Euro (EUR)</option>
+                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] border-b border-[var(--color-border)] pb-4 mb-6">Preferências do Aplicativo</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Select label="Moeda" value={currency} onChange={e => setCurrency(e.target.value)}>
+                        <option value="BRL">Real Brasileiro (R$)</option>
+                        <option value="USD">Dólar Americano ($)</option>
+                        <option value="EUR">Euro (€)</option>
                     </Select>
-                 </div>
-                 <div className="mt-6">
-                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Exportar Dados</h3>
-                    <Button variant="secondary" onClick={() => exportToCSV(userData.transactions, currency)}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                       Exportar para CSV
-                    </Button>
+                    <Select label="Tema Visual" value={theme} onChange={e => setTheme(e.target.value as 'galaxy' | 'minimalist')}>
+                        <option value="galaxy">Galáxia</option>
+                        <option value="minimalist">Minimalista</option>
+                    </Select>
                 </div>
             </Card>
             
-            <IconPickerModal
-                isOpen={isIconPickerOpen}
-                onClose={() => setIconPickerOpen(false)}
-                onSelectIcon={handleSelectIcon}
-            />
-
+             <div className="flex justify-end pt-4">
+                <Button onClick={handleSave} variant="primary">
+                    Salvar Alterações
+                </Button>
+            </div>
         </div>
     );
 };
 
-// --- ADMIN PAGE ---
-const AdminPage: React.FC<{
-    userProfiles: { [username: string]: UserProfile };
-    onDeleteUser: (username: string) => void;
-}> = ({ userProfiles, onDeleteUser }) => {
-    const [userToDelete, setUserToDelete] = useState<string | null>(null);
+// --- FINASSIST (AI CHAT) ---
+const FinAssist: React.FC<{ 
+    chatHistory: ChatMessage[]; 
+    onSendMessage: (message: string) => Promise<void>; 
+    isThinking: boolean;
+}> = ({ chatHistory, onSendMessage, isThinking }) => {
+    const [input, setInput] = useState('');
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const handleDeleteRequest = (username: string) => {
-        setUserToDelete(username);
-    };
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatHistory]);
 
-    const confirmDelete = () => {
-        if (userToDelete) {
-            onDeleteUser(userToDelete);
-            setUserToDelete(null);
+    const handleSend = () => {
+        if (input.trim() && !isThinking) {
+            onSendMessage(input.trim());
+            setInput('');
         }
     };
-    
-    const users = Object.values(userProfiles).filter(p => p.username !== 'admin');
 
     return (
-        <div className="p-4 md:p-8 space-y-6">
-            <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)]">Painel do Administrador</h1>
-
-            <Card>
-                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Gerenciar Usuários</h2>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="border-b border-[var(--color-border)]">
-                                <th className="py-3 px-4 font-semibold text-[var(--color-text-secondary)]">Usuário</th>
-                                <th className="py-3 px-4 font-semibold text-[var(--color-text-secondary)]">E-mail</th>
-                                <th className="py-3 px-4 font-semibold text-[var(--color-text-secondary)]">Registrado em</th>
-                                <th className="py-3 px-4 font-semibold text-[var(--color-text-secondary)]">Status</th>
-                                <th className="py-3 px-4"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {users.length > 0 ? (
-                                users.map(user => (
-                                    <tr key={user.username} className="border-b border-[var(--color-border)]">
-                                        <td className="py-3 px-4">
-                                            <div className="font-medium">@{user.username}</div>
-                                            <div className="text-sm text-[var(--color-text-secondary)]">{user.displayName}</div>
-                                        </td>
-                                        <td className="py-3 px-4">{user.email}</td>
-                                        <td className="py-3 px-4">{new Date(user.registeredAt).toLocaleDateString('pt-BR')}</td>
-                                        <td className="py-3 px-4">
-                                            {user.isVerified ? 
-                                                <span className="px-2 py-1 text-xs font-semibold text-green-200 bg-green-800 rounded-full">Verificado</span> :
-                                                <span className="px-2 py-1 text-xs font-semibold text-yellow-200 bg-yellow-800 rounded-full">Não Verificado</span>
-                                            }
-                                        </td>
-                                        <td className="py-3 px-4 text-right">
-                                            <Button variant="danger" onClick={() => handleDeleteRequest(user.username)}>Excluir</Button>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-10 text-[var(--color-text-secondary)]">
-                                        Nenhum usuário encontrado.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
-
-            <ConfirmationModal
-                isOpen={userToDelete !== null}
-                onClose={() => setUserToDelete(null)}
-                onConfirm={confirmDelete}
-                title={`Excluir Usuário`}
-                confirmText="Excluir Permanentemente"
-                confirmVariant="danger"
-            >
-                <p>
-                    Você tem certeza de que deseja excluir o usuário <strong>@{userToDelete}</strong>? 
-                    Todos os seus dados financeiros serão permanentemente apagados. Esta ação não pode ser desfeita.
-                </p>
-            </ConfirmationModal>
-        </div>
-    );
-};
-
-// --- FINASSIST CHAT ---
-const FinAssist: React.FC<{
-    transactions: Transaction[];
-    history: ChatMessage[];
-    onNewMessage: (message: ChatMessage) => void;
-}> = ({ transactions, history, onNewMessage }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [prompt, setPrompt] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const chatEndRef = React.useRef<HTMLDivElement>(null);
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-    useEffect(() => {
-        const handleOnline = () => setIsOnline(true);
-        const handleOffline = () => setIsOnline(false);
-
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-
-        return () => {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-        };
-    }, []);
-
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [history]);
-
-    const handleSend = async () => {
-        if (!prompt.trim() || isLoading) return;
-
-        const userMessage: ChatMessage = { sender: 'user', text: prompt };
-        onNewMessage(userMessage);
-        setPrompt('');
-        setIsLoading(true);
-
-        const responseText = await getFinAssistResponse(prompt, history, transactions);
-        
-        const botMessage: ChatMessage = { sender: 'finassist', text: responseText };
-        onNewMessage(botMessage);
-        setIsLoading(false);
-    };
-    
-    if (!isOnline) {
-        return null;
-    }
-
-    return (
-        <>
-            <div className={`fixed bottom-6 right-6 z-40 transition-transform duration-300 ${isOpen ? 'scale-0' : 'scale-100'}`}>
-                <button onClick={() => setIsOpen(true)} className="p-4 rounded-full bg-gradient-to-tr from-purple-600 to-cyan-500 text-white shadow-2xl shadow-purple-500/40 transform hover:scale-110 transition-transform">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
-                </button>
-            </div>
-            
-            <div className={`fixed bottom-0 right-0 md:bottom-6 md:right-6 z-50 w-full h-full md:w-[400px] md:h-auto md:max-h-[80vh] bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border-t md:border border-[var(--color-border)] rounded-t-2xl md:rounded-2xl shadow-2xl shadow-purple-500/20 flex flex-col transform transition-transform duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}>
-                <header className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
-                    <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-cyan-400">FinAssist</h3>
-                    <button onClick={() => setIsOpen(false)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </header>
-                
-                <div className="flex-grow p-4 space-y-4 overflow-y-auto">
-                    {history.map((msg, index) => (
-                        <div key={index} className={`flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
-                            {msg.sender === 'finassist' && <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-cyan-500 flex-shrink-0"></div>}
-                            <div className={`max-w-xs md:max-w-sm px-4 py-2 rounded-2xl ${msg.sender === 'user' ? 'bg-[var(--color-accent)] text-white rounded-br-none' : 'bg-[var(--color-border)] text-[var(--color-text-primary)] rounded-bl-none'}`}>
-                                <p className="text-sm">{msg.text}</p>
-                            </div>
-                        </div>
-                    ))}
-                    {isLoading && (
-                        <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-cyan-500 flex-shrink-0"></div>
-                            <div className="max-w-xs md:max-w-sm px-4 py-2 rounded-2xl bg-[var(--color-border)] text-[var(--color-text-primary)] rounded-bl-none">
-                                <div className="flex items-center gap-2">
-                                   <Spinner /> 
-                                   <span className="text-sm text-[var(--color-text-secondary)]">Analisando...</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    <div ref={chatEndRef} />
-                </div>
-
-                <footer className="p-4 border-t border-[var(--color-border)]">
-                    <div className="flex items-center gap-2">
-                        <Input
-                            type="text"
-                            placeholder="Pergunte ao FinAssist..."
-                            value={prompt}
-                            onChange={e => setPrompt(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSend()}
-                            className="flex-grow"
-                            disabled={isLoading}
-                        />
-                        <Button onClick={handleSend} disabled={isLoading || !prompt.trim()}>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                        </Button>
+        <div className="fixed bottom-6 right-6 z-40">
+            <details className="group">
+                <summary className="list-none flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-purple-600 to-cyan-500 rounded-full text-white cursor-pointer shadow-2xl shadow-purple-500/30 transform transition-all duration-300 group-open:w-80 group-open:h-[28rem] group-open:rounded-2xl group-open:items-start">
+                    <div className="transition-opacity duration-200 group-open:opacity-0 group-open:hidden">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" /></svg>
                     </div>
-                </footer>
-            </div>
-        </>
+                    <div className="absolute top-0 left-0 w-full opacity-0 transition-opacity duration-300 delay-200 group-open:opacity-100 flex flex-col h-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-2xl">
+                         <div className="flex items-center justify-between p-3 border-b border-[var(--color-border)]">
+                            <h3 className="font-bold text-lg">FinAssist</h3>
+                            <label htmlFor="finassist-toggle" className="cursor-pointer text-[var(--color-text-secondary)] hover:text-white p-1">&times;</label>
+                        </div>
+                        <div className="flex-grow p-3 space-y-4 overflow-y-auto">
+                            {chatHistory.map((msg, index) => (
+                                <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-xs md:max-w-sm rounded-2xl px-4 py-2 ${msg.sender === 'user' ? 'bg-[var(--color-accent)] text-white rounded-br-none' : 'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] rounded-bl-none'}`}>
+                                        <p className="text-sm" dangerouslySetInnerHTML={{ __html: msg.text.replace(/\n/g, '<br />') }} />
+                                    </div>
+                                </div>
+                            ))}
+                            {isThinking && (
+                                <div className="flex justify-start">
+                                    <div className="max-w-xs md:max-w-sm rounded-2xl px-4 py-2 bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] rounded-bl-none">
+                                        <div className="flex items-center gap-2">
+                                            <Spinner />
+                                            <span className="text-sm">Pensando...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            <div ref={messagesEndRef} />
+                        </div>
+                        <div className="p-3 border-t border-[var(--color-border)]">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    value={input}
+                                    onChange={e => setInput(e.target.value)}
+                                    onKeyPress={e => e.key === 'Enter' && handleSend()}
+                                    placeholder="Pergunte algo..."
+                                    className="w-full bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                                    disabled={isThinking}
+                                />
+                                <button onClick={handleSend} disabled={isThinking} className="p-2 bg-[var(--color-accent)] rounded-lg text-white disabled:opacity-50">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </summary>
+            </details>
+        </div>
     );
 };
 
-// --- MAIN APP COMPONENT ---
+const AdminPanel: React.FC<{
+  onDeleteUser: (username: string) => void;
+  onResetUser: (username:string) => void;
+}> = ({ onDeleteUser, onResetUser }) => {
+
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [userToReset, setUserToReset] = useState<string | null>(null);
+
+  const allUsers = storageService.getAllProfiles();
+  const allPasswords = storageService.getAllPasswords();
+
+  const handleDeleteUser = () => {
+    if (userToDelete) {
+      onDeleteUser(userToDelete);
+      setUserToDelete(null);
+    }
+  };
+  
+  const handleResetUser = () => {
+    if (userToReset) {
+      onResetUser(userToReset);
+      setUserToReset(null);
+    }
+  }
+
+  return (
+    <div className="p-4 md:p-8 space-y-8">
+        <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)]">Painel do Administrador</h1>
+
+        <Card>
+            <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Gerenciamento de Usuários</h2>
+             <div className="overflow-x-auto">
+                 <table className="min-w-full text-sm">
+                    <thead className="border-b border-[var(--color-border)]">
+                        <tr>
+                            <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">Usuário</th>
+                            <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">Nome de Exibição</th>
+                            <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">E-mail</th>
+                            <th className="text-center font-semibold text-[var(--color-text-secondary)] p-4">Verificado</th>
+                            <th className="text-right font-semibold text-[var(--color-text-secondary)] p-4">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {Object.entries(allUsers).map(([username, profile]: [string, UserProfile]) => {
+                          if (username === 'admin') return null; // Can't edit admin
+                          return (
+                            <tr key={username} className="border-b border-[var(--color-border)]">
+                                <td className="p-4 font-mono text-[var(--color-text-secondary)]">@{username}</td>
+                                <td className="p-4 text-[var(--color-text-primary)]">{profile.displayName}</td>
+                                <td className="p-4 text-[var(--color-text-secondary)]">{profile.email}</td>
+                                <td className="p-4 text-center">
+                                    {profile.isVerified 
+                                      ? <Icon name="check" className="h-5 w-5 text-green-400 mx-auto" /> 
+                                      : <Icon name="x_mark" className="h-5 w-5 text-red-400 mx-auto" />}
+                                </td>
+                                <td className="p-4 text-right">
+                                    <div className="flex justify-end items-center gap-2">
+                                        <Button 
+                                          variant="secondary" 
+                                          onClick={() => setUserToReset(username)}
+                                          title="Resetar Dados do Usuário"
+                                          className="p-2"
+                                        >
+                                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h5M20 20v-5h-5M4 4l16 16" /></svg>
+                                        </Button>
+                                        <Button 
+                                          variant="danger" 
+                                          onClick={() => setUserToDelete(username)}
+                                          title="Excluir Usuário"
+                                          className="p-2"
+                                        >
+                                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </Button>
+                                    </div>
+                                </td>
+                            </tr>
+                          )
+                        })}
+                    </tbody>
+                 </table>
+             </div>
+        </Card>
+        
+        <ConfirmationModal
+            isOpen={!!userToDelete}
+            onClose={() => setUserToDelete(null)}
+            onConfirm={handleDeleteUser}
+            title="Confirmar Exclusão de Usuário"
+            confirmText="Excluir"
+            confirmVariant="danger"
+        >
+          Você tem certeza que deseja excluir permanentemente o usuário <strong>@{userToDelete}</strong> e todos os seus dados? Esta ação não pode ser desfeita.
+        </ConfirmationModal>
+        
+        <ConfirmationModal
+            isOpen={!!userToReset}
+            onClose={() => setUserToReset(null)}
+            onConfirm={handleResetUser}
+            title="Confirmar Reset de Dados"
+            confirmText="Resetar Dados"
+            confirmVariant="danger"
+        >
+          Você tem certeza que deseja apagar TODAS as transações, categorias e histórico de chat do usuário <strong>@{userToReset}</strong>? A conta do usuário será mantida, mas seus dados financeiros serão resetados para o padrão.
+        </ConfirmationModal>
+
+    </div>
+  );
+}
+
+
+// --- MAIN APP ---
 const App: React.FC = () => {
-    const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-    const [userProfiles, setUserProfiles] = useState<{ [key: string]: UserProfile }>({});
-    const [userPasswords, setUserPasswords] = useState<{ [key: string]: string }>({});
-    const [userData, setUserData] = useState<UserData>(DEFAULT_USER_DATA);
-    const [isDataLoaded, setIsDataLoaded] = useState(false);
-    
-    const [currentPage, setCurrentPage] = useState<Page>('Dashboard');
-    const [isSidebarOpen, setSidebarOpen] = useState(false);
-    const [selectedMonth, setSelectedMonth] = useState('all');
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [userData, setUserData] = useState<UserData>(DEFAULT_USER_DATA);
+  const [currentPage, setCurrentPage] = useState<Page>('Dashboard');
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-    const [isTransactionModalOpen, setTransactionModalOpen] = useState(false);
-    const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-    const [subItemParentId, setSubItemParentId] = useState<string | undefined>(undefined);
-    
-    const [isDeleteConfirmModalOpen, setDeleteConfirmModalOpen] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState<{ type: 'transaction' | 'category', id: string } | null>(null);
-    const [noteToShow, setNoteToShow] = useState<string | null>(null);
+  const [isTxModalOpen, setTxModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [subItemParentId, setSubItemParentId] = useState<string | undefined>(undefined);
+  
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
 
+  const [isNoteModalOpen, setNoteModalOpen] = useState(false);
+  const [noteToShow, setNoteToShow] = useState('');
 
-    // PWA Service Worker Registration
-    useEffect(() => {
-        if ('serviceWorker' in navigator) {
-          window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-              .then(registration => console.log('Service Worker registered with scope: ', registration.scope))
-              .catch(err => console.log('Service Worker registration failed: ', err));
-          });
-        }
-      }, []);
+  const [isFinAssistThinking, setFinAssistThinking] = useState(false);
+  
+  const [selectedMonth, setSelectedMonth] = useState('all');
 
-    // Load all user profiles and passwords from storage on initial render
-    useEffect(() => {
-        const savedProfiles = storageService.getAllProfiles();
-        const savedPasswords = storageService.getAllPasswords();
-
-        // Ensure admin user exists
-        if (!savedProfiles['admin']) {
-            savedProfiles['admin'] = { 
-                username: 'admin', 
-                displayName: 'Admin',
-                email: 'admin@controlfin.app',
-                isVerified: true,
-                registeredAt: new Date().toISOString() 
-            };
-            savedPasswords['admin'] = 'admin'; // In a real app, this would be hashed
-            storageService.saveAllProfiles(savedProfiles);
-            storageService.saveAllPasswords(savedPasswords);
-        }
-
-        setUserProfiles(savedProfiles);
-        setUserPasswords(savedPasswords);
-        setIsDataLoaded(true);
-    }, []);
-    
-    // Load specific user financial data when currentUser changes
-    useEffect(() => {
-        if (currentUser) {
-            const savedData = storageService.getUserData(currentUser.username);
-            if (savedData) {
-                const parsedData = savedData; // Data is already parsed by service
-                // FIX: Cast categories from storage to handle legacy data that may be missing an icon,
-                // before mapping and ensuring every category conforms to the updated Category type.
-                const categoriesWithIcons = (parsedData.categories as any[]).map((c): Category => ({
-                    ...c,
-                    icon: c.icon ?? INITIAL_CATEGORIES.find(ic => ic.name === c.name)?.icon ?? 'question_mark_circle'
-                }));
-                const mergedCategories = [...categoriesWithIcons];
-                INITIAL_CATEGORIES.forEach(initialCat => {
-                    if (!mergedCategories.some(userCat => userCat.name === initialCat.name)) {
-                        mergedCategories.push(initialCat);
-                    }
-                });
-                const theme = parsedData.theme || 'galaxy';
-                setUserData({ ...DEFAULT_USER_DATA, ...parsedData, categories: mergedCategories, theme });
-            } else {
-                setUserData(DEFAULT_USER_DATA);
-            }
-        }
-    }, [currentUser]);
-
-    // Save user's financial data to storage when it changes
-    useEffect(() => {
-        if (currentUser) {
-            storageService.saveUserData(currentUser.username, userData);
-        }
-    }, [userData, currentUser]);
-
-    // Set theme on body
-    useEffect(() => {
-        document.documentElement.dataset.theme = userData.theme;
-    }, [userData.theme]);
-
-    const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
-    
-    const handleLogin = async (username: string, password: string) => {
-      const profile = userProfiles[username];
-      if (!profile || userPasswords[username] !== password) {
-        throw new Error("Usuário ou senha inválidos.");
+  // Load user from session storage on mount
+  useEffect(() => {
+    const loggedInUser = sessionStorage.getItem('controlFin_currentUser');
+    if (loggedInUser) {
+      const profile = storageService.getAllProfiles()[loggedInUser];
+      const data = storageService.getUserData(loggedInUser);
+      if (profile && data) {
+        setCurrentUser(profile);
+        setUserData(data);
+        document.documentElement.setAttribute('data-theme', data.theme);
       }
-      if (!profile.isVerified) {
-          throw new Error("Sua conta não foi verificada. Por favor, cadastre-se novamente para receber um novo código.");
-      }
-      setCurrentUser(profile);
+    }
+  }, []);
+  
+  // --- AUTH LOGIC ---
+  
+  const handleRegister = async (username: string, password: string, email: string): Promise<string> => {
+    const allProfiles = storageService.getAllProfiles();
+    if (allProfiles[username]) {
+      throw new Error("Este nome de usuário já existe.");
+    }
+    if (Object.values(allProfiles).some((p: UserProfile) => p.email === email)) {
+      throw new Error("Este e-mail já está em uso.");
+    }
+    
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    const newUserProfile: UserProfile = {
+      username,
+      displayName: username,
+      email,
+      registeredAt: new Date().toISOString(),
+      isVerified: false,
+      verificationCode,
     };
+    
+    const allPasswords = storageService.getAllPasswords();
+    
+    // In a real app, hash the password. Here we store it in plain text for simplicity.
+    allPasswords[username] = password;
+    allProfiles[username] = newUserProfile;
+    
+    storageService.saveAllProfiles(allProfiles);
+    storageService.saveAllPasswords(allPasswords);
+    
+    return verificationCode;
+  };
+  
+  const handleLogin = async (username: string, password: string) => {
+    const allProfiles = storageService.getAllProfiles();
+    const allPasswords = storageService.getAllPasswords();
+    const profile = allProfiles[username];
+    
+    if (!profile || allPasswords[username] !== password) {
+      throw new Error("Usuário ou senha inválidos.");
+    }
+    
+    if (!profile.isVerified) {
+        throw new Error("Sua conta não foi verificada. Por favor, verifique seu e-mail.");
+    }
 
-    const handleRegister = async (username: string, password: string, email: string): Promise<string> => {
-        if (userProfiles[username]) {
-            throw new Error("Este nome de usuário já existe.");
-        }
-        if (Object.values(userProfiles).some(p => p.email.toLowerCase() === email.toLowerCase())) {
-            throw new Error("Este e-mail já está em uso.");
-        }
+    let data = storageService.getUserData(username);
+    if (!data) {
+      data = { ...DEFAULT_USER_DATA, categories: [...INITIAL_CATEGORIES] }; // ensure fresh copy
+      storageService.saveUserData(username, data);
+    }
+    
+    setCurrentUser(profile);
+    setUserData(data);
+    sessionStorage.setItem('controlFin_currentUser', username);
+    document.documentElement.setAttribute('data-theme', data.theme);
+  };
+  
+  const handleVerifyEmail = async (username: string, code: string) => {
+    const allProfiles = storageService.getAllProfiles();
+    const profile = allProfiles[username];
+    
+    if (profile && profile.verificationCode === code) {
+        profile.isVerified = true;
+        delete profile.verificationCode;
+        storageService.saveAllProfiles(allProfiles);
         
-        const verificationCode = generateCode();
+        // Auto-login after verification
+        const allPasswords = storageService.getAllPasswords();
+        await handleLogin(username, allPasswords[username]);
+    } else {
+        throw new Error("Código de verificação inválido.");
+    }
+  };
+  
+  const handleForgotPassword = async (email: string): Promise<string | null> => {
+    const allProfiles = storageService.getAllProfiles();
+    const profile = Object.values(allProfiles).find((p: UserProfile) => p.email === email);
+    
+    if (profile) {
+      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      profile.verificationCode = resetCode; // Reuse verification code for password reset
+      storageService.saveAllProfiles(allProfiles);
+      return resetCode;
+    }
+    return null;
+  };
+  
+  const handleResetPassword = async (email: string, code: string, newPassword: string) => {
+    const allProfiles = storageService.getAllProfiles();
+    const profile = Object.values(allProfiles).find((p: UserProfile) => p.email === email);
 
-        const newUserProfile: UserProfile = {
-            username,
-            displayName: username,
-            email,
-            registeredAt: new Date().toISOString(),
-            isVerified: false, // Starts as unverified
-            verificationCode,
+    if (profile && profile.verificationCode === code) {
+        const allPasswords = storageService.getAllPasswords();
+        allPasswords[profile.username] = newPassword;
+        delete profile.verificationCode;
+        
+        storageService.saveAllProfiles(allProfiles);
+        storageService.saveAllPasswords(allPasswords);
+    } else {
+        throw new Error("Código de recuperação inválido.");
+    }
+  };
+  
+  const handleLogout = () => {
+    setCurrentUser(null);
+    sessionStorage.removeItem('controlFin_currentUser');
+  };
+  
+  // --- ADMIN LOGIC ---
+  const handleDeleteUser = (username: string) => {
+    const allProfiles = storageService.getAllProfiles();
+    const allPasswords = storageService.getAllPasswords();
+    
+    delete allProfiles[username];
+    delete allPasswords[username];
+    
+    storageService.saveAllProfiles(allProfiles);
+    storageService.saveAllPasswords(allPasswords);
+    storageService.removeUserData(username);
+    
+    // Force a re-render of the admin panel
+    setCurrentPage('Admin Panel'); 
+    setTimeout(() => setCurrentPage('Admin Panel'), 0);
+  };
+  
+  const handleResetUserData = (username: string) => {
+    storageService.saveUserData(username, { ...DEFAULT_USER_DATA, categories: [...INITIAL_CATEGORIES] });
+    alert(`Dados do usuário @${username} foram resetados.`);
+  }
+
+  // --- DATA SYNC ---
+  useEffect(() => {
+    if (currentUser) {
+      storageService.saveUserData(currentUser.username, userData);
+      document.documentElement.setAttribute('data-theme', userData.theme);
+    }
+  }, [userData, currentUser]);
+  
+  // --- TRANSACTIONS LOGIC ---
+  const handleSaveTransaction = (transactionData: Omit<Transaction, 'id' | 'subItems'>) => {
+    setUserData(prev => {
+      let newTransactions = [...prev.transactions];
+
+      if (editingTransaction) { // --- UPDATE ---
+        newTransactions = newTransactions.map(t => {
+            if (t.id === editingTransaction.id) {
+                return { ...t, ...transactionData };
+            }
+            // Update parent if a subitem is edited
+            if (t.subItems?.some(st => st.id === editingTransaction.id)) {
+                return {
+                    ...t,
+                    subItems: t.subItems.map(st => st.id === editingTransaction.id ? { ...st, ...transactionData } : st)
+                }
+            }
+            return t;
+        });
+      } else { // --- CREATE ---
+        const newTransaction: Transaction = {
+          ...transactionData,
+          id: `tx_${Date.now()}_${Math.random()}`,
         };
-
-        const updatedProfiles = { ...userProfiles, [username]: newUserProfile };
-        const updatedPasswords = { ...userPasswords, [username]: password };
         
-        setUserProfiles(updatedProfiles);
-        setUserPasswords(updatedPasswords);
-
-        storageService.saveAllProfiles(updatedProfiles);
-        storageService.saveAllPasswords(updatedPasswords);
-        storageService.saveUserData(username, DEFAULT_USER_DATA);
-        
-        return verificationCode;
-    };
-
-    const handleVerifyEmail = async (username: string, code: string) => {
-        const profile = userProfiles[username];
-        if (!profile || profile.verificationCode !== code) {
-            throw new Error("Código de verificação inválido.");
-        }
-        
-        const verifiedProfile: UserProfile = { ...profile, isVerified: true, verificationCode: undefined };
-        const updatedProfiles = { ...userProfiles, [username]: verifiedProfile };
-        setUserProfiles(updatedProfiles);
-        storageService.saveAllProfiles(updatedProfiles);
-        
-        setCurrentUser(verifiedProfile);
-    };
-
-    const handleForgotPassword = async (email: string): Promise<string | null> => {
-        const userEntry = Object.entries(userProfiles).find(([_, profile]) => profile.email.toLowerCase() === email.toLowerCase());
-        if (!userEntry) {
-            throw new Error("Nenhum usuário encontrado com este e-mail.");
-        }
-        
-        const username = userEntry[0];
-        const resetCode = generateCode();
-
-        const updatedProfile = { ...userEntry[1], verificationCode: resetCode };
-        const updatedProfiles = { ...userProfiles, [username]: updatedProfile };
-        
-        setUserProfiles(updatedProfiles);
-        storageService.saveAllProfiles(updatedProfiles);
-
-        return resetCode;
-    };
-    
-    const handleResetPassword = async (email: string, code: string, newPassword: string) => {
-        const userEntry = Object.entries(userProfiles).find(([_, profile]) => profile.email.toLowerCase() === email.toLowerCase());
-        if (!userEntry) throw new Error("Usuário não encontrado.");
-
-        const username = userEntry[0];
-        const profile = userEntry[1];
-        
-        if (profile.verificationCode !== code) {
-            throw new Error("Código de recuperação inválido.");
-        }
-
-        const updatedProfile = { ...profile, verificationCode: undefined };
-        const updatedProfiles = { ...userProfiles, [username]: updatedProfile };
-        const updatedPasswords = { ...userPasswords, [username]: newPassword };
-
-        setUserProfiles(updatedProfiles);
-        setUserPasswords(updatedPasswords);
-        storageService.saveAllProfiles(updatedProfiles);
-        storageService.saveAllPasswords(updatedPasswords);
-    };
-
-    const handleLogout = () => {
-        setCurrentUser(null);
-        setCurrentPage('Dashboard');
-        setSelectedMonth('all');
-    };
-
-    const handleNavigate = (page: Page) => {
-        setCurrentPage(page);
-        setSidebarOpen(false);
-    };
-
-    // --- Transaction Handlers ---
-    const handleSaveTransaction = (transactionData: Omit<Transaction, 'id' | 'subItems'>) => {
-        setUserData(prev => {
-            let updatedTransactions: Transaction[];
-            const parentIdToUpdate = transactionData.parentId;
-    
-            if (editingTransaction) { // --- UPDATE ---
-                updatedTransactions = prev.transactions.map(t =>
-                    t.id === editingTransaction.id ? { ...t, ...transactionData } : t
-                );
-            } else { // --- ADD NEW ---
-                const newTransaction: Transaction = {
-                    ...transactionData,
-                    id: `trans${Date.now()}`,
-                };
-                updatedTransactions = [...prev.transactions, newTransaction];
-            }
-    
-            if (parentIdToUpdate) {
-                const newParentAmount = updatedTransactions
-                    .filter(t => t.parentId === parentIdToUpdate)
-                    .reduce((sum, item) => sum + item.amount, 0);
-    
-                updatedTransactions = updatedTransactions.map(t =>
-                    t.id === parentIdToUpdate ? { ...t, amount: newParentAmount } : t
-                );
-            }
-            
-            return { ...prev, transactions: updatedTransactions };
-        });
-        setEditingTransaction(null);
-        setSubItemParentId(undefined);
-    };
-    
-    const openTransactionModal = (transaction?: Transaction, parentId?: string) => {
-        setEditingTransaction(transaction || null);
-        setSubItemParentId(parentId);
-        setTransactionModalOpen(true);
-    };
-
-    const handleDeleteTransactionRequest = (transactionId: string) => {
-        setItemToDelete({ type: 'transaction', id: transactionId });
-        setDeleteConfirmModalOpen(true);
-    };
-
-    const confirmDeleteTransaction = (transactionId: string) => {
-        const transactionToDelete = userData.transactions.find(t => t.id === transactionId);
-        if (!transactionToDelete) return;
-        const childIds = userData.transactions.filter(t => t.parentId === transactionId).map(t => t.id);
-        const idsToDelete = new Set([transactionId, ...childIds]);
-        let updatedTransactions = userData.transactions.filter(t => !idsToDelete.has(t.id));
-    
-        if (transactionToDelete.parentId) {
-            const parentId = transactionToDelete.parentId;
-            const newAmount = updatedTransactions
-                .filter(sub => sub.parentId === parentId)
-                .reduce((sum, item) => sum + item.amount, 0);
-            updatedTransactions = updatedTransactions.map(t => 
-                t.id === parentId ? { ...t, amount: newAmount } : t
+        if (transactionData.parentId) {
+            newTransactions = newTransactions.map(t => 
+                t.id === transactionData.parentId
+                    ? { ...t, subItems: [...(t.subItems || []), newTransaction] }
+                    : t
             );
-        }
-        setUserData(prev => ({ ...prev, transactions: updatedTransactions }));
-    };
-
-    // --- Category Handlers ---
-    const handleUpdateCategories = (categories: Category[]) => {
-        setUserData(prev => ({...prev, categories}));
-    };
-    
-    const handleDeleteCategoryRequest = (categoryId: string) => {
-        const categoryToDelete = userData.categories.find(c => c.id === categoryId);
-        if (!categoryToDelete) return;
-
-        const isInUse = userData.transactions.some(t => t.category === categoryToDelete.name || t.subItems?.some(sub => sub.category === categoryToDelete.name));
-        if (isInUse) {
-            alert("Não é possível excluir a categoria, pois ela está sendo usada em transações.");
-            return;
-        }
-        setItemToDelete({ type: 'category', id: categoryId });
-        setDeleteConfirmModalOpen(true);
-    };
-    
-    const confirmDeleteCategory = (categoryId: string) => {
-        handleUpdateCategories(userData.categories.filter(c => c.id !== categoryId));
-    };
-
-    const confirmDelete = () => {
-        if (!itemToDelete) return;
-        if(itemToDelete.type === 'transaction') {
-            confirmDeleteTransaction(itemToDelete.id);
         } else {
-            confirmDeleteCategory(itemToDelete.id);
+            newTransactions.push(newTransaction);
         }
-        setDeleteConfirmModalOpen(false);
-        setItemToDelete(null);
-    };
-    
-    // --- Profile & Other Handlers ---
-    const handleUpdateProfile = (profileUpdate: Partial<UserProfile>) => {
-        if (!currentUser) return;
+      }
+      
+      // Recalculate parent amount if needed
+      newTransactions = newTransactions.map(t => {
+          if (t.subItems && t.subItems.length > 0) {
+              const newAmount = t.subItems.reduce((sum, item) => sum + item.amount, 0);
+              return { ...t, amount: newAmount };
+          }
+          return t;
+      });
+      
+      // Sort transactions by date (most recent first)
+      newTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-        const updatedProfile = { ...currentUser, ...profileUpdate };
-        const updatedProfiles = { ...userProfiles, [currentUser.username]: updatedProfile };
-        setUserProfiles(updatedProfiles);
-        setCurrentUser(updatedProfile);
-        storageService.saveAllProfiles(updatedProfiles);
-    };
-    
-    const handleDeleteUser = (usernameToDelete: string) => {
-        const updatedProfiles = { ...userProfiles };
-        delete updatedProfiles[usernameToDelete];
+      return { ...prev, transactions: newTransactions };
+    });
 
-        const updatedPasswords = { ...userPasswords };
-        delete updatedPasswords[usernameToDelete];
+    setEditingTransaction(null);
+  };
 
-        setUserProfiles(updatedProfiles);
-        setUserPasswords(updatedPasswords);
+  const handleOpenTxModal = (transaction?: Transaction | null, parentId?: string) => {
+      setEditingTransaction(transaction || null);
+      setSubItemParentId(parentId);
+      setTxModalOpen(true);
+  };
+  
+  const handleDeleteTransaction = (transactionId: string) => {
+      setTransactionToDelete(transactionId);
+      setDeleteModalOpen(true);
+  };
+
+  const confirmDeleteTransaction = () => {
+    if (transactionToDelete) {
+      setUserData(prev => {
+        let newTransactions = [...prev.transactions];
+
+        // Find and remove the transaction or sub-transaction
+        newTransactions = newTransactions.filter(t => t.id !== transactionToDelete);
         
-        storageService.saveAllProfiles(updatedProfiles);
-        storageService.saveAllPasswords(updatedPasswords);
-        storageService.removeUserData(usernameToDelete);
-    };
-
-    const handleUpdateCurrency = (currency: string) => setUserData(prev => ({ ...prev, currency }));
-    const handleUpdateTheme = (theme: 'galaxy' | 'minimalist') => setUserData(prev => ({ ...prev, theme }));
-    const handleNewChatMessage = (message: ChatMessage) => setUserData(prev => ({ ...prev, chatHistory: [...prev.chatHistory, message]}));
-
-    const transactionsWithSubItems = useMemo(() => {
-        const allTransactions = [...userData.transactions];
-        const transactionMap: { [id: string]: Transaction } = {};
-        const rootTransactions: Transaction[] = [];
-        allTransactions.forEach(t => { transactionMap[t.id] = { ...t, subItems: [] }; });
-        allTransactions.forEach(t => {
-            if (t.parentId && transactionMap[t.parentId]) {
-                transactionMap[t.parentId].subItems!.push(transactionMap[t.id]);
-            } else {
-                rootTransactions.push(transactionMap[t.id]);
+        // Also check within sub-items
+        newTransactions = newTransactions.map(t => {
+          if (t.subItems) {
+            const filteredSubItems = t.subItems.filter(st => st.id !== transactionToDelete);
+            // If subitems changed, recalculate parent amount
+            if (filteredSubItems.length < t.subItems.length) {
+              const newAmount = filteredSubItems.reduce((sum, item) => sum + item.amount, 0);
+              return { ...t, subItems: filteredSubItems, amount: newAmount };
             }
+          }
+          return t;
         });
-        const sortByDate = (a: Transaction, b: Transaction) => new Date(b.date).getTime() - new Date(a.date).getTime();
-        rootTransactions.sort(sortByDate);
-        rootTransactions.forEach(t => { if (t.subItems) { t.subItems.sort(sortByDate); } });
-        return rootTransactions;
-    }, [userData.transactions]);
-    
-    const formatMonthYear = useCallback((monthStr: string) => {
-        const [year, month] = monthStr.split('-');
-        return new Date(parseInt(year), parseInt(month) - 1).toLocaleString('pt-BR', {
-            month: 'long',
-            year: 'numeric'
-        }).replace(/^\w/, c => c.toUpperCase());
-    }, []);
-
-    const availableMonths = useMemo(() => {
-        const months = new Set<string>();
-        userData.transactions.forEach(t => {
-            months.add(t.date.slice(0, 7)); // 'YYYY-MM'
-        });
-        return Array.from(months).sort().reverse();
-    }, [userData.transactions]);
-
-
-    if (!isDataLoaded) {
-        return <div className="w-screen h-screen bg-slate-900 flex items-center justify-center"><Spinner /></div>
+        
+        return { ...prev, transactions: newTransactions };
+      });
     }
-
-    if (!currentUser) {
-        return <LoginScreen 
-            onLogin={handleLogin} 
-            onRegister={handleRegister} 
-            onVerifyEmail={handleVerifyEmail}
-            onForgotPassword={handleForgotPassword}
-            onResetPassword={handleResetPassword}
-        />;
-    }
-
-    const renderPage = () => {
-        switch (currentPage) {
-            case 'Dashboard':
-                return <Dashboard 
-                            userData={userData} 
-                            selectedMonth={selectedMonth} 
-                            onMonthChange={setSelectedMonth}
-                            availableMonths={availableMonths}
-                            formatMonthYear={formatMonthYear}
-                        />;
-            case 'Transactions':
-                return <TransactionsPage 
-                            transactions={transactionsWithSubItems}
-                            categories={userData.categories}
-                            currency={userData.currency}
-                            onAddTransaction={(parentId) => openTransactionModal(undefined, parentId)}
-                            onEditTransaction={(t) => openTransactionModal(t)}
-                            onDeleteTransaction={handleDeleteTransactionRequest}
-                            onShowNote={(note) => setNoteToShow(note)}
-                            selectedMonth={selectedMonth}
-                            onMonthChange={setSelectedMonth}
-                            availableMonths={availableMonths}
-                            formatMonthYear={formatMonthYear}
-                         />;
-            case 'Reports':
-                return <ReportsPage
-                            userData={userData} 
-                            selectedMonth={selectedMonth}
-                            onMonthChange={setSelectedMonth}
-                            availableMonths={availableMonths}
-                            formatMonthYear={formatMonthYear}
-                        />;
-            case 'Settings':
-                return <SettingsPage 
-                    userData={userData}
-                    userProfile={currentUser}
-                    onUpdateCategories={handleUpdateCategories}
-                    onUpdateCurrency={handleUpdateCurrency}
-                    onDeleteCategory={handleDeleteCategoryRequest}
-                    onUpdateTheme={handleUpdateTheme}
-                    onUpdateProfile={handleUpdateProfile}
-                />;
-            case 'Admin Panel':
-                return currentUser.username === 'admin' ? 
-                       <AdminPage userProfiles={userProfiles} onDeleteUser={handleDeleteUser} /> 
-                       : <Dashboard userData={userData} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} availableMonths={availableMonths} formatMonthYear={formatMonthYear}/>; // fallback
-            default:
-                return <Dashboard userData={userData} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} availableMonths={availableMonths} formatMonthYear={formatMonthYear}/>;
+    setDeleteModalOpen(false);
+    setTransactionToDelete(null);
+  };
+  
+  // --- CATEGORIES LOGIC ---
+  const handleSaveCategory = (categoryData: Omit<Category, 'id'>, id?: string) => {
+    setUserData(prev => {
+        const newCategories = [...prev.categories];
+        if (id) { // Update
+            const index = newCategories.findIndex(c => c.id === id);
+            if (index !== -1) {
+                newCategories[index] = { ...newCategories[index], ...categoryData };
+            }
+        } else { // Create
+            newCategories.push({ ...categoryData, id: `cat_${Date.now()}` });
         }
-    };
+        return { ...prev, categories: newCategories };
+    });
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+      setUserData(prev => {
+          // Prevent deleting a category if it's in use
+          if (prev.transactions.some(t => prev.categories.find(c => c.id === categoryId)?.name === t.category)) {
+              alert("Não é possível excluir uma categoria que está sendo usada em transações.");
+              return prev;
+          }
+          const newCategories = prev.categories.filter(c => c.id !== categoryId);
+          return { ...prev, categories: newCategories };
+      });
+  };
+
+  // --- SETTINGS/PROFILE LOGIC ---
+  const handleUpdateSettings = (newSettings: Partial<UserData>) => {
+      setUserData(prev => ({...prev, ...newSettings}));
+  };
+  
+  const handleUpdateProfile = (newProfile: Partial<UserProfile>) => {
+      if (!currentUser) return;
+      const allProfiles = storageService.getAllProfiles();
+      const updatedProfile = { ...allProfiles[currentUser.username], ...newProfile };
+      allProfiles[currentUser.username] = updatedProfile;
+      storageService.saveAllProfiles(allProfiles);
+      setCurrentUser(updatedProfile);
+  };
+  
+  // --- FINASSIST LOGIC ---
+  const handleFinAssistSend = async (message: string) => {
+    const newMessage: ChatMessage = { sender: 'user', text: message };
+    setUserData(prev => ({ ...prev, chatHistory: [...prev.chatHistory, newMessage]}));
+    setFinAssistThinking(true);
     
-    return (
-        <div className="flex h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
-            <Sidebar 
-                currentPage={currentPage}
-                onNavigate={handleNavigate}
-                onLogout={handleLogout}
-                userProfile={currentUser}
-                isOpen={isSidebarOpen}
-            />
-            {isSidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setSidebarOpen(false)}></div>}
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <Header pageTitle={currentPage} onMenuClick={() => setSidebarOpen(true)} />
-                <main className="flex-1 overflow-y-auto">
-                    {renderPage()}
-                </main>
-            </div>
+    try {
+        const responseText = await getFinAssistResponse(message, userData.chatHistory, userData.transactions);
+        const assistMessage: ChatMessage = { sender: 'finassist', text: responseText };
+        setUserData(prev => ({ ...prev, chatHistory: [...prev.chatHistory, assistMessage]}));
+    } catch (error) {
+        console.error("FinAssist Error:", error);
+        const errorMessage: ChatMessage = { sender: 'finassist', text: "Desculpe, não consegui processar sua solicitação no momento." };
+        setUserData(prev => ({ ...prev, chatHistory: [...prev.chatHistory, errorMessage]}));
+    } finally {
+        setFinAssistThinking(false);
+    }
+  };
+  
+  // --- DERIVED STATE / HELPERS ---
+  const availableMonths = useMemo(() => {
+    const months = new Set(userData.transactions.map(t => t.date.slice(0, 7)));
+    return Array.from(months).sort().reverse();
+  }, [userData.transactions]);
+  
+  const formatMonthYear = (month: string) => {
+      const [year, monthNum] = month.split('-');
+      return new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleString('pt-BR', {
+          month: 'long',
+          year: 'numeric',
+      });
+  };
 
-            <FinAssist 
-                transactions={userData.transactions}
-                history={userData.chatHistory}
-                onNewMessage={handleNewChatMessage}
-            />
-            
-            <TransactionModal
-                isOpen={isTransactionModalOpen}
-                onClose={() => { setTransactionModalOpen(false); setEditingTransaction(null); setSubItemParentId(undefined); }}
-                onSave={handleSaveTransaction}
-                categories={userData.categories}
-                currency={userData.currency}
-                editingTransaction={editingTransaction}
-                parentId={subItemParentId}
-            />
+  useEffect(() => {
+    if (availableMonths.length > 0 && !availableMonths.includes(selectedMonth) && selectedMonth !== 'all') {
+      setSelectedMonth('all');
+    }
+  }, [availableMonths, selectedMonth]);
 
-            <ConfirmationModal
-                isOpen={isDeleteConfirmModalOpen}
-                onClose={() => setDeleteConfirmModalOpen(false)}
-                onConfirm={confirmDelete}
-                title={`Excluir ${itemToDelete?.type === 'transaction' ? 'Transação' : 'Categoria'}`}
-                confirmText="Excluir"
-                confirmVariant="danger"
-            >
-                <p>
-                    Você tem certeza de que deseja excluir est{itemToDelete?.type === 'transaction' ? 'a transação' : 'a categoria'}? 
-                    Esta ação não pode ser desfeita.
-                </p>
-            </ConfirmationModal>
 
-            <Modal
-                isOpen={noteToShow !== null}
-                onClose={() => setNoteToShow(null)}
-                title="Anotação do Subitem"
-            >
-                <div className="text-[var(--color-text-secondary)] whitespace-pre-wrap break-words max-h-[60vh] overflow-y-auto">
-                    {noteToShow}
-                </div>
-                <div className="flex justify-end pt-6">
-                    <Button variant="secondary" onClick={() => setNoteToShow(null)}>
-                        Fechar
-                    </Button>
-                </div>
-            </Modal>
-        </div>
-    );
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'Dashboard':
+        return <Dashboard 
+                  userData={userData} 
+                  selectedMonth={selectedMonth} 
+                  onMonthChange={setSelectedMonth}
+                  availableMonths={availableMonths}
+                  formatMonthYear={formatMonthYear}
+               />;
+      case 'Transactions':
+        return <TransactionsPage 
+                  transactions={userData.transactions}
+                  categories={userData.categories}
+                  currency={userData.currency}
+                  onAddTransaction={(parentId) => handleOpenTxModal(null, parentId)}
+                  onEditTransaction={(t) => handleOpenTxModal(t)}
+                  onDeleteTransaction={handleDeleteTransaction}
+                  onShowNote={(note) => { setNoteToShow(note); setNoteModalOpen(true); }}
+                  selectedMonth={selectedMonth} 
+                  onMonthChange={setSelectedMonth}
+                  availableMonths={availableMonths}
+                  formatMonthYear={formatMonthYear}
+                />;
+      case 'Reports':
+        return <ReportsPage userData={userData} />;
+      case 'Settings':
+        return <SettingsPage 
+                  userData={userData} 
+                  onUpdateSettings={handleUpdateSettings} 
+                  userProfile={currentUser!} 
+                  onUpdateProfile={handleUpdateProfile}
+               />;
+      case 'Admin Panel':
+        if (currentUser?.username === 'admin') {
+            return <AdminPanel onDeleteUser={handleDeleteUser} onResetUser={handleResetUserData} />;
+        }
+        return <p>Acesso negado.</p>;
+      default:
+        return <div>Página não encontrada</div>;
+    }
+  };
+  
+  if (!currentUser) {
+    return <LoginScreen 
+             onLogin={handleLogin} 
+             onRegister={handleRegister}
+             onVerifyEmail={handleVerifyEmail}
+             onForgotPassword={handleForgotPassword}
+             onResetPassword={handleResetPassword}
+           />;
+  }
+
+  return (
+    <div className="flex h-screen bg-[var(--color-bg-primary)]">
+      <Sidebar 
+          currentPage={currentPage} 
+          onNavigate={(page) => { setCurrentPage(page); setSidebarOpen(false); }} 
+          onLogout={handleLogout}
+          userProfile={currentUser}
+          isOpen={isSidebarOpen}
+      />
+      {isSidebarOpen && <div onClick={() => setSidebarOpen(false)} className="fixed inset-0 bg-black/50 z-40 md:hidden"></div>}
+      <div className="flex-1 flex flex-col overflow-y-auto">
+        <Header pageTitle={currentPage} onMenuClick={() => setSidebarOpen(true)} />
+        <main className="flex-1">
+          {renderPage()}
+        </main>
+      </div>
+
+      <TransactionModal
+        isOpen={isTxModalOpen}
+        onClose={() => setTxModalOpen(false)}
+        onSave={handleSaveTransaction}
+        categories={userData.categories}
+        currency={userData.currency}
+        editingTransaction={editingTransaction}
+        parentId={subItemParentId}
+      />
+      
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={confirmDeleteTransaction}
+        title="Confirmar Exclusão"
+        confirmText="Excluir"
+        confirmVariant="danger"
+      >
+        Você tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
+      </ConfirmationModal>
+
+      <Modal isOpen={isNoteModalOpen} onClose={() => setNoteModalOpen(false)} title="Anotação">
+         <p className="text-[var(--color-text-secondary)] whitespace-pre-wrap">{noteToShow}</p>
+         <div className="flex justify-end pt-4">
+            <Button onClick={() => setNoteModalOpen(false)} variant="primary">Fechar</Button>
+         </div>
+      </Modal>
+
+      <FinAssist 
+        chatHistory={userData.chatHistory} 
+        onSendMessage={handleFinAssistSend}
+        isThinking={isFinAssistThinking}
+      />
+    </div>
+  );
 };
 
 export default App;
