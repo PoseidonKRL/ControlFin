@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, Sector } from 'recharts';
 import { UserData, Page, Transaction, TransactionType, Category, ChatMessage, UserProfile } from './types';
@@ -739,9 +740,8 @@ const ReportsPage: React.FC<{ userData: UserData }> = ({ userData }) => {
                                     {/* FIX: The @types/recharts package may have incorrect typings for the Pie component,
                                         missing the 'activeIndex' prop. Using @ts-ignore to bypass this typing issue,
                                         as the component works as expected at runtime with this prop. */}
-                                    {
-                                      // @ts-ignore
-                                    }
+                                    // FIX: The @ts-ignore directive must be placed on the line immediately preceding the component with the type error.
+                                    // @ts-ignore
                                     <Pie
                                         activeIndex={activeIndex}
                                         activeShape={renderActiveShape}
@@ -1085,6 +1085,62 @@ const AdminPanel: React.FC<{
   );
 }
 
+// --- PWA INSTALL PROMPT FOR IOS ---
+const IOSInstallPrompt: React.FC = () => {
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        // @ts-ignore - 'standalone' is a non-standard property for iOS Safari
+        const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+
+        if (isIOS && !isInStandaloneMode) {
+            const lastPromptTime = localStorage.getItem('iosInstallPromptDismissed');
+            // Show prompt if it has never been shown or if it has been more than 3 days
+            const threeDays = 3 * 24 * 60 * 60 * 1000;
+            if (!lastPromptTime || (new Date().getTime() - Number(lastPromptTime)) > threeDays) {
+                // Show after a small delay to not be intrusive
+                setTimeout(() => setIsVisible(true), 2000);
+            }
+        }
+    }, []);
+
+    const handleDismiss = () => {
+        localStorage.setItem('iosInstallPromptDismissed', new Date().getTime().toString());
+        setIsVisible(false);
+    };
+
+    if (!isVisible) {
+        return null;
+    }
+
+    return (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-md bg-[var(--color-bg-card)]/95 backdrop-blur-lg text-[var(--color-text-primary)] p-4 rounded-xl shadow-2xl z-50 flex items-center gap-4 animate-slide-up border border-[var(--color-border)]">
+            <img src="logo.svg" alt="ControlFin Logo" className="w-14 h-14 rounded-lg flex-shrink-0"/>
+            <div className="flex-grow">
+                <p className="font-bold">Instale o ControlFin no seu aparelho!</p>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                    É rápido e fácil. Toque no ícone de 
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 inline-block mx-1 align-bottom">
+                        <path fillRule="evenodd" d="M12 2.25a.75.75 0 01.75.75v11.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V3a.75.75 0 01.75-.75zm-9 13.5a.75.75 0 01.75.75v2.25a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5V16.5a.75.75 0 011.5 0v2.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V16.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
+                    </svg>
+                    e depois em "Adicionar à Tela de Início".
+                </p>
+            </div>
+            <button onClick={handleDismiss} className="p-1 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] self-start flex-shrink-0" aria-label="Fechar prompt de instalação">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <style>{`
+                @keyframes slide-up {
+                    from { transform: translate(-50%, 100px); opacity: 0; }
+                    to { transform: translate(-50%, 0); opacity: 1; }
+                }
+                .animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+            `}</style>
+        </div>
+    );
+};
+
 
 // --- MAIN APP ---
 const App: React.FC = () => {
@@ -1106,7 +1162,6 @@ const App: React.FC = () => {
   const [isFinAssistThinking, setFinAssistThinking] = useState(false);
   
   const [selectedMonth, setSelectedMonth] = useState('all');
-  const [showIOSInstallPrompt, setShowIOSInstallPrompt] = useState(false);
 
   // Load user from session storage on mount
   useEffect(() => {
@@ -1436,21 +1491,6 @@ const App: React.FC = () => {
     }
   }, [availableMonths, selectedMonth]);
 
-  useEffect(() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    // @ts-ignore
-    const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
-
-    if (isIOS && !isInStandaloneMode) {
-        const lastPromptTime = localStorage.getItem('iosInstallPromptDismissed');
-        const oneDay = 24 * 60 * 60 * 1000;
-        if (!lastPromptTime || (new Date().getTime() - Number(lastPromptTime)) > oneDay) {
-            setShowIOSInstallPrompt(true);
-        }
-    }
-  }, []);
-
-
   const renderPage = () => {
     switch (currentPage) {
       case 'Dashboard':
@@ -1555,34 +1595,7 @@ const App: React.FC = () => {
         isThinking={isFinAssistThinking}
       />
 
-      {showIOSInstallPrompt && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-md bg-slate-700/90 backdrop-blur-lg text-white p-3 rounded-xl shadow-2xl z-50 flex items-center gap-4 animate-slide-up">
-            <img src="logo.svg" alt="ControlFin Logo" className="w-12 h-12 rounded-lg"/>
-            <div className="flex-grow">
-                <p className="font-semibold">Instale o ControlFin!</p>
-                <p className="text-xs text-slate-300">
-                    Toque em <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mx-0.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414l-3-3z" clipRule="evenodd" transform="rotate(180 10 10)" /></svg> 
-                    e depois em "Adicionar à Tela de Início".
-                </p>
-            </div>
-            <button 
-              onClick={() => {
-                setShowIOSInstallPrompt(false);
-                localStorage.setItem('iosInstallPromptDismissed', new Date().getTime().toString());
-              }} 
-              className="p-1 text-slate-400 hover:text-white"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-            <style>{`
-                @keyframes slide-up {
-                    from { transform: translate(-50%, 100px); opacity: 0; }
-                    to { transform: translate(-50%, 0); opacity: 1; }
-                }
-                .animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-            `}</style>
-        </div>
-      )}
+      <IOSInstallPrompt />
     </div>
   );
 };
