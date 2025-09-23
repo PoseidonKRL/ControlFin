@@ -4,7 +4,7 @@
   "description": "Um aplicativo de gerenciamento financeiro pessoal.",
   "main": "index.tsx",
   "scripts": {
-    "build": "rm -rf dist && mkdir dist && esbuild index.tsx --bundle --outfile=dist/bundle.js --jsx=automatic --minify --define:process.env.API_KEY=\\\"\\\" && cp index.html manifest.json sw.js dist/ && (cp logo*.png dist/ 2>/dev/null || true)"
+    "build": "rm -rf dist && mkdir dist && esbuild index.tsx --bundle --outfile=dist/bundle.js --jsx=automatic --minify --define:process.env.API_KEY=\\\"\\\" && cp index.html manifest.json sw.js logo.svg dist/"
   },
   "dependencies": {
     "react": "^19.1.1",

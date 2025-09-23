@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, Sector } from 'recharts';
 import { UserData, Page, Transaction, TransactionType, Category, ChatMessage, UserProfile } from './types';
@@ -734,7 +735,9 @@ const ReportsPage: React.FC<{ userData: UserData }> = ({ userData }) => {
                         <div className="h-96 w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    {/* FIX: Suppress TypeScript error for the Pie component's 'activeIndex' prop, which is missing from the installed type definitions. */}
+                                    {/* FIX: The @types/recharts package may have incorrect typings for the Pie component,
+                                        missing the 'activeIndex' prop. Using @ts-ignore to bypass this typing issue,
+                                        as the component works as expected at runtime with this prop. */}
                                     {/* @ts-ignore */}
                                     <Pie
                                         activeIndex={activeIndex}
@@ -1100,6 +1103,7 @@ const App: React.FC = () => {
   const [isFinAssistThinking, setFinAssistThinking] = useState(false);
   
   const [selectedMonth, setSelectedMonth] = useState('all');
+  const [showIOSInstallPrompt, setShowIOSInstallPrompt] = useState(false);
 
   // Load user from session storage on mount
   useEffect(() => {
@@ -1429,6 +1433,20 @@ const App: React.FC = () => {
     }
   }, [availableMonths, selectedMonth]);
 
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    // @ts-ignore
+    const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+
+    if (isIOS && !isInStandaloneMode) {
+        const lastPromptTime = localStorage.getItem('iosInstallPromptDismissed');
+        const oneDay = 24 * 60 * 60 * 1000;
+        if (!lastPromptTime || (new Date().getTime() - Number(lastPromptTime)) > oneDay) {
+            setShowIOSInstallPrompt(true);
+        }
+    }
+  }, []);
+
 
   const renderPage = () => {
     switch (currentPage) {
@@ -1533,6 +1551,35 @@ const App: React.FC = () => {
         onSendMessage={handleFinAssistSend}
         isThinking={isFinAssistThinking}
       />
+
+      {showIOSInstallPrompt && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-md bg-slate-700/90 backdrop-blur-lg text-white p-3 rounded-xl shadow-2xl z-50 flex items-center gap-4 animate-slide-up">
+            <img src="logo.svg" alt="ControlFin Logo" className="w-12 h-12 rounded-lg"/>
+            <div className="flex-grow">
+                <p className="font-semibold">Instale o ControlFin!</p>
+                <p className="text-xs text-slate-300">
+                    Toque em <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mx-0.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414l-3-3z" clipRule="evenodd" transform="rotate(180 10 10)" /></svg> 
+                    e depois em "Adicionar à Tela de Início".
+                </p>
+            </div>
+            <button 
+              onClick={() => {
+                setShowIOSInstallPrompt(false);
+                localStorage.setItem('iosInstallPromptDismissed', new Date().getTime().toString());
+              }} 
+              className="p-1 text-slate-400 hover:text-white"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <style>{`
+                @keyframes slide-up {
+                    from { transform: translate(-50%, 100px); opacity: 0; }
+                    to { transform: translate(-50%, 0); opacity: 1; }
+                }
+                .animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+            `}</style>
+        </div>
+      )}
     </div>
   );
 };
