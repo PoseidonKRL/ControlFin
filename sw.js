@@ -1,4 +1,4 @@
-const CACHE_NAME = 'controlfin-cache-v2'; // Incremented version to ensure old cache is cleared
+const CACHE_NAME = 'controlfin-cache-v1';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -34,31 +34,25 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET' || event.request.url.startsWith('chrome-extension://')) {
+  if (event.request.method !== 'GET') {
       return;
   }
 
-  // Use the 'Stale-While-Revalidate' strategy
+  // Cache-first strategy for all GET requests
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       const cachedResponse = await cache.match(event.request);
-
+      
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // If the request is successful, update the cache.
+        // If the request is successful, update the cache
         if (networkResponse && networkResponse.status === 200) {
             const responseToCache = networkResponse.clone();
             cache.put(event.request, responseToCache);
         }
         return networkResponse;
-      }).catch(err => {
-        // Network failed, do nothing, the cached response (if any) is already served.
-        console.error('Fetch failed:', err);
-        // This catch is to prevent unhandled promise rejection errors.
       });
 
-      // Return the cached response immediately if it exists, 
-      // otherwise wait for the network response.
-      // The network request is always made in the background to update the cache.
+      // Return cached response if available, otherwise wait for network
       return cachedResponse || fetchPromise;
     })
   );
