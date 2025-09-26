@@ -12,43 +12,79 @@
     <meta name="apple-mobile-web-app-title" content="ControlFin" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+      html {
+        scroll-behavior: smooth;
+      }
       body {
         font-family: 'Inter', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
       @import url('https://rsms.me/inter/inter.css');
 
       :root[data-theme="galaxy"] {
         --color-bg-primary: #0f172a; /* slate-900 */
         --color-bg-secondary: #1e293b; /* slate-800 */
-        --color-bg-card: rgba(30, 41, 59, 0.5); /* slate-800/50 */
-        --color-text-primary: #e2e8f0; /* slate-200 */
+        --color-bg-glass: rgba(30, 41, 59, 0.6); /* slate-800/60 for glassmorphism */
+        --color-text-primary: #f1f5f9; /* slate-100 */
         --color-text-secondary: #94a3b8; /* slate-400 */
         --color-border: #334155; /* slate-700 */
         --color-accent: #9333ea; /* purple-600 */
         --color-accent-hover: #a855f7; /* purple-500 */
+        --color-accent-secondary: #22d3ee; /* cyan-400 */
         --color-success: #4ade80; /* green-400 */
         --color-danger: #f87171; /* red-400 */
         --color-danger-strong: #dc2626; /* red-600 */
+        --color-warning: #f97316; /* orange-500 */
         --scrollbar-track: #1e293b;
         --scrollbar-thumb: #475569;
         --scrollbar-thumb-hover: #64748b;
+        --glow-color: rgba(168, 85, 247, 0.5); /* purple-500/50 */
       }
 
       :root[data-theme="minimalist"] {
         --color-bg-primary: #f9fafb; /* gray-50 */
         --color-bg-secondary: #ffffff; /* white */
-        --color-bg-card: #ffffff; /* white */
+        --color-bg-glass: rgba(255, 255, 255, 0.7); /* white/70 for glassmorphism */
         --color-text-primary: #1f2937; /* gray-800 */
         --color-text-secondary: #6b7280; /* gray-500 */
         --color-border: #e5e7eb; /* gray-200 */
         --color-accent: #2563eb; /* blue-600 */
         --color-accent-hover: #3b82f6; /* blue-500 */
+        --color-accent-secondary: #0ea5e9; /* sky-500 */
         --color-success: #16a34a; /* green-600 */
         --color-danger: #ef4444; /* red-500 */
         --color-danger-strong: #dc2626; /* red-600 */
+        --color-warning: #f59e0b; /* amber-500 */
         --scrollbar-track: #f1f5f9;
         --scrollbar-thumb: #cbd5e1;
         --scrollbar-thumb-hover: #94a3b8;
+        --glow-color: rgba(59, 130, 246, 0.5); /* blue-500/50 */
+      }
+      
+      :root[data-theme="barbie"] {
+        --color-bg-primary: #fdf2f8; /* pink-50 */
+        --color-bg-secondary: #ffffff; /* white */
+        --color-bg-glass: rgba(255, 255, 255, 0.6); 
+        --color-text-primary: #831843; /* pink-800 */
+        --color-text-secondary: #be185d; /* pink-600 */
+        --color-border: #fbcfe8; /* pink-200 */
+        --color-accent: #e5007a; /* barbie pink */
+        --color-accent-hover: #db2777; /* pink-600 */
+        --color-accent-secondary: #0891b2; /* cyan-600 */
+        --color-success: #059669; /* emerald-600 */
+        --color-danger: #e11d48; /* rose-600 */
+        --color-danger-strong: #be123c; /* rose-700 */
+        --color-warning: #f59e0b; /* amber-500 */
+        --scrollbar-track: #fce7f3; /* pink-100 */
+        --scrollbar-thumb: #f9a8d4; /* pink-300 */
+        --scrollbar-thumb-hover: #f472b6; /* pink-400 */
+        --glow-color: rgba(219, 39, 119, 0.4);
+      }
+
+      /* General transitions for smoothness */
+      * {
+        transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
       }
 
       /* Custom scrollbar for a better look */
@@ -65,6 +101,45 @@
       }
       ::-webkit-scrollbar-thumb:hover {
         background: var(--scrollbar-thumb-hover);
+      }
+      
+      /* Page transition animation */
+      @keyframes page-transition-in {
+        from {
+          opacity: 0;
+          transform: translateY(15px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-page-transition {
+        animation: page-transition-in 0.4s cubic-bezier(0.215, 0.610, 0.355, 1.000) forwards;
+      }
+      
+      /* Pulse/Glow animation for chart updates */
+      @keyframes pulse-glow {
+        0% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.0);
+        }
+        50% {
+          transform: scale(1.02);
+          box-shadow: 0 0 8px 12px var(--glow-color);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.0);
+        }
+      }
+      .animate-chart-update {
+        animation: pulse-glow 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+
+      /* Fix for select option text color in dark mode */
+      [data-theme="galaxy"] select option {
+        color: #1f2937; /* Use a dark color for options in dark theme for readability */
       }
     </style>
   <script type="importmap">

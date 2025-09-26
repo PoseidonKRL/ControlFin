@@ -5,6 +5,12 @@ export enum TransactionType {
   EXPENSE = 'EXPENSE'
 }
 
+export enum TransactionPriority {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH'
+}
+
 export interface Transaction {
   id: string;
   description: string;
@@ -15,6 +21,7 @@ export interface Transaction {
   parentId?: string;
   subItems?: Transaction[];
   notes?: string;
+  priority?: TransactionPriority;
 }
 
 export interface Category {
@@ -34,15 +41,13 @@ export interface UserData {
   categories: Category[];
   currency: string;
   chatHistory: ChatMessage[];
-  theme: 'galaxy' | 'minimalist';
+  theme: 'galaxy' | 'minimalist' | 'barbie';
 }
 
 export interface UserProfile {
   username: string; // The unique login identifier, cannot be changed
   displayName: string; // The display name, can be changed
-  email: string; // User's email address
+  email?: string; // User's email address is now optional
   profilePicture?: string; // base64 encoded image
   registeredAt: string; // ISO string
-  isVerified: boolean; // Flag to check if email is verified
-  verificationCode?: string; // Temporary code for verification or password reset
 }

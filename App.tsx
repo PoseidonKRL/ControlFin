@@ -1,9 +1,7 @@
 
-
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, Sector } from 'recharts';
-import { UserData, Page, Transaction, TransactionType, Category, ChatMessage, UserProfile } from './types';
+import { UserData, Page, Transaction, TransactionType, Category, ChatMessage, UserProfile, TransactionPriority } from './types';
 import { formatCurrency, processChartData, exportToCSV } from './utils/helpers';
 import { getFinAssistResponse } from './services/geminiService';
 import * as storageService from './services/storageService';
@@ -27,32 +25,156 @@ const DEFAULT_USER_DATA: UserData = {
   theme: 'galaxy',
 };
 
+// --- Custom Hook for Animating Numbers ---
+const useCountUp = (end: number, duration = 400) => {
+    const [count, setCount] = useState(0);
+    const frameRate = 1000 / 60;
+    const totalFrames = Math.round(duration / frameRate);
+
+    useEffect(() => {
+        let frame = 0;
+        // Start from 0 on each change of `end` value
+        setCount(0); 
+        const counter = setInterval(() => {
+            frame++;
+            const progress = frame / totalFrames;
+            // Ease-out quad function for smoother animation
+            const easeOutProgress = progress * (2 - progress);
+            setCount(end * easeOutProgress);
+
+            if (frame === totalFrames) {
+                clearInterval(counter);
+                setCount(end); // Ensure final value is exact
+            }
+        }, frameRate);
+        return () => clearInterval(counter);
+    }, [end, duration, frameRate, totalFrames]);
+    
+    return count;
+};
+
+// --- Custom Tooltip Components ---
+const CustomBarTooltip: React.FC<{ active?: boolean; payload?: any[]; label?: string; currency: string; }> = ({ active, payload, label, currency }) => {
+    if (active && payload && payload.length) {
+        const income = payload.find(p => p.dataKey === 'Receita')?.value || 0;
+        const expense = payload.find(p => p.dataKey === 'Despesa')?.value || 0;
+        const balance = income - expense;
+
+        const tooltipStyle: React.CSSProperties = {
+            backgroundColor: 'var(--color-bg-glass)',
+            border: `1px solid var(--color-border)`,
+            backdropFilter: 'blur(5px)',
+            borderRadius: '0.75rem',
+            padding: '1rem',
+            color: 'var(--color-text-primary)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        };
+        
+        return (
+            <div style={tooltipStyle} className="text-sm">
+                <p className="font-bold mb-2">{label}</p>
+                <p className="flex justify-between items-center gap-4">
+                    <span style={{ color: 'var(--color-success)' }}>Receita:</span>
+                    <span className="font-semibold">{formatCurrency(income, currency)}</span>
+                </p>
+                <p className="flex justify-between items-center gap-4">
+                    <span style={{ color: 'var(--color-danger)' }}>Despesa:</span>
+                    <span className="font-semibold">{formatCurrency(expense, currency)}</span>
+                </p>
+                <hr className="my-2 border-[var(--color-border)]" />
+                <p className="flex justify-between items-center gap-4 font-bold">
+                    <span style={{ color: balance >= 0 ? 'var(--color-accent-secondary)' : 'var(--color-danger)' }}>
+                        Saldo:
+                    </span>
+                    <span>{formatCurrency(balance, currency)}</span>
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
+
+const CustomPieTooltip: React.FC<{ active?: boolean; payload?: any[]; currency: string; }> = ({ active, payload, currency }) => {
+    if (active && payload && payload.length) {
+        const data = payload[0];
+        const { name, value, percent } = data;
+        const color = data.color || data.fill;
+
+        const tooltipStyle: React.CSSProperties = {
+            backgroundColor: 'var(--color-bg-glass)',
+            border: `1px solid var(--color-border)`,
+            backdropFilter: 'blur(5px)',
+            borderRadius: '0.75rem',
+            padding: '1rem',
+            color: 'var(--color-text-primary)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        };
+
+        return (
+            <div style={tooltipStyle} className="text-sm">
+                <p className="font-bold mb-2 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></span>
+                  {name}
+                </p>
+                <p className="flex justify-between items-center gap-4">
+                    <span>Valor:</span>
+                    <span className="font-semibold">{formatCurrency(value, currency)}</span>
+                </p>
+                <p className="flex justify-between items-center gap-4">
+                    <span>Percentual:</span>
+                    <span className="font-semibold">{(percent * 100).toFixed(2)}%</span>
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
+
+const CustomBalanceTooltip: React.FC<{ active?: boolean; payload?: any[]; label?: string; currency: string; }> = ({ active, payload, label, currency }) => {
+    if (active && payload && payload.length) {
+        const balance = payload[0].value;
+        const color = payload[0].fill;
+
+        const tooltipStyle: React.CSSProperties = {
+            backgroundColor: 'var(--color-bg-glass)',
+            border: `1px solid var(--color-border)`,
+            backdropFilter: 'blur(5px)',
+            borderRadius: '0.75rem',
+            padding: '1rem',
+            color: 'var(--color-text-primary)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        };
+
+        return (
+            <div style={tooltipStyle} className="text-sm">
+                <p className="font-bold mb-2">{label}</p>
+                <p className="flex justify-between items-center gap-4 font-bold">
+                    <span style={{ color }}>Saldo:</span>
+                    <span>{formatCurrency(balance, currency)}</span>
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
+
 
 // --- UI Components defined in the same file to reduce file count --- //
 
 // --- LOGIN SCREEN ---
-type AuthView = 'login' | 'register' | 'forgotPassword' | 'resetPassword' | 'verifyEmail';
+type AuthView = 'login' | 'register';
 
 const LoginScreen: React.FC<{
   onLogin: (username: string, password: string) => Promise<void>;
-  onRegister: (username: string, password: string, email: string) => Promise<string>;
-  onVerifyEmail: (username: string, code: string) => Promise<void>;
-  onForgotPassword: (email: string) => Promise<string | null>;
-  onResetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
-}> = ({ onLogin, onRegister, onVerifyEmail, onForgotPassword, onResetPassword }) => {
+  onRegister: (username: string, password: string) => Promise<void>;
+}> = ({ onLogin, onRegister }) => {
   const [view, setView] = useState<AuthView>('login');
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
-  
-  // These states hold data between view transitions
-  const [userToVerify, setUserToVerify] = useState<string | null>(null); 
-  const [emailToReset, setEmailToReset] = useState<string | null>(null);
 
   const clearFormState = () => {
     setError('');
@@ -61,8 +183,6 @@ const LoginScreen: React.FC<{
     setUsername('');
     setPassword('');
     setConfirmPassword('');
-    setCode('');
-    // keep email for convenience if switching between login/register
   };
   
   const handleViewChange = (newView: AuthView) => {
@@ -84,33 +204,9 @@ const LoginScreen: React.FC<{
         case 'register':
           if (password !== confirmPassword) throw new Error("As senhas não coincidem.");
           if (password.length < 6) throw new Error("A senha deve ter pelo menos 6 caracteres.");
-          const verificationCode = await onRegister(username, password, email);
-          setUserToVerify(username); // Store username for verification step
-          setInfoMessage(`Em uma aplicação real, este código seria enviado para ${email}. Para esta demonstração, seu código é: ${verificationCode}`);
-          setView('verifyEmail');
+          await onRegister(username, password);
+          // User is auto-logged in by parent component
           break;
-        case 'verifyEmail':
-          if (!userToVerify) throw new Error("Sessão de verificação inválida. Tente se cadastrar novamente.");
-          await onVerifyEmail(userToVerify, code);
-          break;
-        case 'forgotPassword':
-            const resetCode = await onForgotPassword(email);
-            if (resetCode) {
-              setEmailToReset(email);
-              setInfoMessage(`Um código de recuperação foi gerado para ${email}. Em uma aplicação real, ele seria enviado por e-mail. Seu código é: ${resetCode}`);
-              setView('resetPassword');
-            } else {
-              throw new Error("E-mail não encontrado.");
-            }
-            break;
-        case 'resetPassword':
-            if (!emailToReset) throw new Error("Sessão de recuperação inválida.");
-            if (password !== confirmPassword) throw new Error("As novas senhas não coincidem.");
-            if (password.length < 6) throw new Error("A nova senha deve ter pelo menos 6 caracteres.");
-            await onResetPassword(emailToReset, code, password);
-            setInfoMessage("Senha redefinida com sucesso! Você já pode fazer o login.");
-            handleViewChange('login');
-            break;
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.');
@@ -128,9 +224,8 @@ const LoginScreen: React.FC<{
             <Input type="text" placeholder="Usuário" value={username} onChange={e => setUsername(e.target.value)} required disabled={isLoading} />
             <Input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading} />
             <Button type="submit" variant="primary" disabled={isLoading}>{isLoading ? <Spinner /> : 'Entrar'}</Button>
-            <div className="flex justify-between text-sm mt-4 text-slate-400">
+            <div className="flex justify-center text-sm mt-4 text-slate-400">
               <p>Não tem uma conta? <button type="button" onClick={() => handleViewChange('register')} className="font-semibold text-purple-400 hover:text-purple-300">Cadastre-se</button></p>
-              <button type="button" onClick={() => handleViewChange('forgotPassword')} className="font-semibold text-purple-400 hover:text-purple-300">Esqueceu a senha?</button>
             </div>
           </>
         );
@@ -139,41 +234,10 @@ const LoginScreen: React.FC<{
           <>
             <h2 className="text-2xl font-bold">Criar Conta</h2>
             <Input type="text" placeholder="Usuário" value={username} onChange={e => setUsername(e.target.value)} required disabled={isLoading} autoCapitalize="none" />
-            <Input type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} />
             <Input type="password" placeholder="Senha (mín. 6 caracteres)" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading} />
             <Input type="password" placeholder="Confirmar Senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required disabled={isLoading} />
-            <Button type="submit" variant="primary" disabled={isLoading}>{isLoading ? <Spinner /> : 'Cadastrar'}</Button>
+            <Button type="submit" variant="primary" disabled={isLoading}>{isLoading ? <Spinner /> : 'Cadastrar e Entrar'}</Button>
             <p className="text-sm mt-4 text-slate-400">Já tem uma conta? <button type="button" onClick={() => handleViewChange('login')} className="font-semibold text-purple-400 hover:text-purple-300">Faça o login</button></p>
-          </>
-        );
-      case 'verifyEmail':
-        return (
-            <>
-              <h2 className="text-2xl font-bold">Verificar E-mail</h2>
-              <p className="text-slate-300 text-sm">Um código de verificação foi gerado para @{userToVerify}.</p>
-              <Input type="text" placeholder="Código de 6 dígitos" value={code} onChange={e => setCode(e.target.value)} required disabled={isLoading} maxLength={6} />
-              <Button type="submit" variant="primary" disabled={isLoading}>{isLoading ? <Spinner /> : 'Verificar e Entrar'}</Button>
-              <p className="text-sm mt-4 text-slate-400">Voltar para o <button type="button" onClick={() => handleViewChange('login')} className="font-semibold text-purple-400 hover:text-purple-300">Login</button></p>
-            </>
-        );
-      case 'forgotPassword':
-        return (
-          <>
-            <h2 className="text-2xl font-bold">Recuperar Senha</h2>
-            <Input type="email" placeholder="Seu e-mail cadastrado" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} />
-            <Button type="submit" variant="primary" disabled={isLoading}>{isLoading ? <Spinner /> : 'Enviar Código'}</Button>
-            <p className="text-sm mt-4 text-slate-400">Voltar para o <button type="button" onClick={() => handleViewChange('login')} className="font-semibold text-purple-400 hover:text-purple-300">Login</button></p>
-          </>
-        );
-      case 'resetPassword':
-        return (
-          <>
-            <h2 className="text-2xl font-bold">Redefinir Senha</h2>
-            <p className="text-slate-300 text-sm">Insira o código enviado para {emailToReset} e defina uma nova senha.</p>
-            <Input type="text" placeholder="Código de 6 dígitos" value={code} onChange={e => setCode(e.target.value)} required disabled={isLoading} maxLength={6} />
-            <Input type="password" placeholder="Nova Senha (mín. 6 caracteres)" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading} />
-            <Input type="password" placeholder="Confirmar Nova Senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required disabled={isLoading} />
-            <Button type="submit" variant="primary" disabled={isLoading}>{isLoading ? <Spinner /> : 'Redefinir Senha'}</Button>
           </>
         );
       default:
@@ -214,7 +278,7 @@ const LoginScreen: React.FC<{
 
 // --- HEADER ---
 const Header: React.FC<{ pageTitle: string; onMenuClick: () => void }> = ({ pageTitle, onMenuClick }) => (
-    <header className="md:hidden sticky top-0 bg-[var(--color-bg-primary)]/70 backdrop-blur-md z-30 p-4 flex items-center gap-4 border-b border-[var(--color-border)]">
+    <header className="md:hidden sticky top-0 bg-[var(--color-bg-primary)]/70 backdrop-blur-lg z-30 p-4 flex items-center gap-4 border-b border-[var(--color-border)]">
       <button onClick={onMenuClick} className="text-[var(--color-text-primary)]" aria-label="Open menu">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>
       </button>
@@ -239,7 +303,7 @@ const Sidebar: React.FC<{
     ];
 
     return (
-        <aside className={`fixed md:relative inset-y-0 left-0 z-50 w-64 bg-[var(--color-bg-primary)]/80 backdrop-blur-lg border-r border-[var(--color-border)] flex flex-col p-4 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out`}>
+        <aside className={`fixed md:relative inset-y-0 left-0 z-50 w-64 bg-[var(--color-bg-primary)]/80 backdrop-blur-lg border-r border-[var(--color-border)] flex flex-col p-4 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-out`}>
             <div className="flex items-center gap-3 mb-10">
                 {userProfile.profilePicture ? (
                     <img src={userProfile.profilePicture} alt="Foto de perfil" className="w-10 h-10 rounded-full object-cover" />
@@ -253,19 +317,21 @@ const Sidebar: React.FC<{
                     <p className="text-sm text-[var(--color-text-secondary)]">Bem-vindo(a) de volta</p>
                 </div>
             </div>
-            <nav className="flex-grow">
+            <nav className="flex-grow space-y-2">
                 {navItems.map(({ page, label, icon, adminOnly }) => {
                     if (adminOnly && userProfile.username !== 'admin') return null;
+                    const isActive = currentPage === page;
                     return (
                         <button
                             key={page}
                             onClick={() => onNavigate(page)}
-                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg text-left text-lg transition-colors ${
-                                currentPage === page
-                                    ? 'bg-[var(--color-accent)] text-white font-semibold shadow-lg'
+                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg text-left text-lg transition-colors relative ${
+                                isActive
+                                    ? 'bg-purple-600/20 text-white font-semibold'
                                     : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)]'
                             }`}
                         >
+                            {isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-[var(--color-accent-secondary)] rounded-r-full"></div>}
                             {icon}
                             <span>{label}</span>
                         </button>
@@ -296,6 +362,7 @@ const TransactionModal: React.FC<{
     const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE);
     const [category, setCategory] = useState(categories[0]?.name || '');
     const [notes, setNotes] = useState('');
+    const [priority, setPriority] = useState<TransactionPriority>(TransactionPriority.MEDIUM);
     
     const isSubItem = !!parentId || !!editingTransaction?.parentId;
     const hasSubItems = !!editingTransaction?.subItems?.length;
@@ -308,6 +375,7 @@ const TransactionModal: React.FC<{
             setType(editingTransaction.type);
             setCategory(editingTransaction.category);
             setNotes(editingTransaction.notes || '');
+            setPriority(editingTransaction.priority || TransactionPriority.MEDIUM);
         } else {
             // Reset form for new transaction
             setDescription('');
@@ -316,6 +384,7 @@ const TransactionModal: React.FC<{
             setType(TransactionType.EXPENSE);
             setCategory(categories[0]?.name || '');
             setNotes('');
+            setPriority(TransactionPriority.MEDIUM);
         }
     }, [editingTransaction, isOpen, categories]);
 
@@ -329,7 +398,8 @@ const TransactionModal: React.FC<{
                 type,
                 category,
                 parentId: editingTransaction?.parentId || parentId,
-                notes: isSubItem ? notes : undefined,
+                notes,
+                priority,
             });
             onClose();
         }
@@ -355,31 +425,38 @@ const TransactionModal: React.FC<{
                 ) : (
                     <div>
                         <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">Valor ({currency})</label>
-                        <p className="w-full bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[var(--color-text-secondary)]">
+                        <p className="w-full bg-[var(--color-bg-primary)] border-2 border-[var(--color-border)] rounded-lg px-3 py-2 text-[var(--color-text-secondary)]">
                            {formatCurrency(editingTransaction!.amount, currency)} (Soma dos subitens)
                         </p>
                     </div>
                 )}
-                <Input label="Data" type="date" value={date} onChange={e => setDate(e.target.value)} required />
-                <Select label="Tipo" value={type} onChange={e => setType(e.target.value as TransactionType)}>
-                    <option value={TransactionType.EXPENSE}>Despesa</option>
-                    <option value={TransactionType.INCOME}>Receita</option>
-                </Select>
-                 <Select label="Categoria" value={category} onChange={e => setCategory(e.target.value)} required>
-                    {relevantCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                 </Select>
-                 {isSubItem && (
-                    <div>
-                        <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">Anotação/Observação</label>
-                        <textarea
-                            value={notes}
-                            onChange={e => setNotes(e.target.value)}
-                            placeholder="Ex: 5kg de arroz, 2L de leite..."
-                            className="w-full bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-                            rows={3}
-                        />
-                    </div>
-                )}
+                <div className="grid grid-cols-2 gap-4">
+                    <Input label="Data" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                    <Select label="Prioridade" value={priority} onChange={e => setPriority(e.target.value as TransactionPriority)}>
+                        <option value={TransactionPriority.HIGH}>Alta</option>
+                        <option value={TransactionPriority.MEDIUM}>Média</option>
+                        <option value={TransactionPriority.LOW}>Baixa</option>
+                    </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <Select label="Tipo" value={type} onChange={e => setType(e.target.value as TransactionType)}>
+                        <option value={TransactionType.EXPENSE}>Despesa</option>
+                        <option value={TransactionType.INCOME}>Receita</option>
+                    </Select>
+                     <Select label="Categoria" value={category} onChange={e => setCategory(e.target.value)} required>
+                        {relevantCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                     </Select>
+                </div>
+                 <div>
+                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">Anotação/Observação (opcional)</label>
+                    <textarea
+                        value={notes}
+                        onChange={e => setNotes(e.target.value)}
+                        placeholder="Ex: 5kg de arroz, 2L de leite..."
+                        className="w-full bg-transparent border-2 border-[var(--color-border)] rounded-lg px-3 py-2 text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none focus:ring-0 focus:border-[var(--color-accent)] transition-all"
+                        rows={2}
+                    />
+                </div>
                 <div className="flex justify-end gap-3 pt-4">
                     <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
                     <Button type="submit" variant="primary">Salvar</Button>
@@ -411,26 +488,30 @@ const Dashboard: React.FC<{
     const totalExpense = filteredTransactions.filter(t => t.type === TransactionType.EXPENSE && !t.parentId).reduce((sum, t) => sum + t.amount, 0);
     const balance = totalIncome - totalExpense;
 
+    const animatedIncome = useCountUp(totalIncome);
+    const animatedExpense = useCountUp(totalExpense);
+    const animatedBalance = useCountUp(balance);
+
     const chartColors = {
-        barSuccess: theme === 'galaxy' ? '#4ade80' : '#16a34a',
-        barDanger: theme === 'galaxy' ? '#f87171' : '#ef4444',
-        text: theme === 'galaxy' ? '#94a3b8' : '#6b7280',
-    };
-    
-    const tooltipColors = {
-        background: theme === 'galaxy' ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-        border: theme === 'galaxy' ? '#475569' : '#e5e7eb',
-        label: theme === 'galaxy' ? '#e2e8f0' : '#1f2937',
-        legend: theme === 'galaxy' ? '#cbd5e1' : '#4b5563',
+        barSuccess: 'var(--color-success)',
+        barDanger: 'var(--color-danger)',
+        text: 'var(--color-text-secondary)',
+        legend: 'var(--color-text-primary)',
     };
 
-    const cardGradient = theme === 'galaxy' 
-        ? {
-            success: "from-green-500/20 to-slate-800/50",
-            danger: "from-red-500/20 to-slate-800/50",
-            accent: "from-purple-500/20 to-slate-800/50",
-          }
-        : { success: "", danger: "", accent: "" };
+    const cardGradient = {
+        galaxy: {
+            success: "from-green-500/20 to-transparent",
+            danger: "from-red-500/20 to-transparent",
+            accent: "from-cyan-500/20 to-transparent",
+        },
+        minimalist: { success: "", danger: "", accent: "" },
+        barbie: {
+            success: "from-emerald-500/20 to-transparent",
+            danger: "from-rose-500/20 to-transparent",
+            accent: "from-cyan-500/20 to-transparent",
+        }
+    }[theme];
 
     return (
         <div className="p-4 md:p-8 space-y-6 md:space-y-8">
@@ -442,6 +523,7 @@ const Dashboard: React.FC<{
                             value={selectedMonth}
                             onChange={(e) => onMonthChange(e.target.value)}
                             aria-label="Filtrar por mês"
+                            icon={<Icon name="calendar" className="w-5 h-5" />}
                         >
                             <option value="all">Todos os Meses</option>
                             {availableMonths.map(month => (
@@ -456,15 +538,15 @@ const Dashboard: React.FC<{
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card className={`bg-gradient-to-br ${cardGradient.success}`}>
                     <h3 className="text-[var(--color-text-secondary)] text-lg">Receita Total</h3>
-                    <p className="text-3xl md:text-4xl font-bold text-[var(--color-success)]">{formatCurrency(totalIncome, currency)}</p>
+                    <p className="text-3xl md:text-4xl font-bold text-[var(--color-success)]">{formatCurrency(animatedIncome, currency)}</p>
                 </Card>
                 <Card className={`bg-gradient-to-br ${cardGradient.danger}`}>
                     <h3 className="text-[var(--color-text-secondary)] text-lg">Despesa Total</h3>
-                    <p className="text-3xl md:text-4xl font-bold text-[var(--color-danger)]">{formatCurrency(totalExpense, currency)}</p>
+                    <p className="text-3xl md:text-4xl font-bold text-[var(--color-danger)]">{formatCurrency(animatedExpense, currency)}</p>
                 </Card>
                 <Card className={`bg-gradient-to-br ${cardGradient.accent}`}>
                     <h3 className="text-[var(--color-text-secondary)] text-lg">Saldo Líquido</h3>
-                    <p className={`text-3xl md:text-4xl font-bold ${balance >= 0 ? 'text-cyan-400' : 'text-orange-400'}`}>{formatCurrency(balance, currency)}</p>
+                    <p className={`text-3xl md:text-4xl font-bold ${balance >= 0 ? 'text-[var(--color-accent-secondary)]' : 'text-orange-400'}`}>{formatCurrency(animatedBalance, currency)}</p>
                 </Card>
             </div>
             <Card>
@@ -475,17 +557,10 @@ const Dashboard: React.FC<{
                             <XAxis dataKey="name" stroke={chartColors.text} angle={-30} textAnchor="end" height={60} tick={{ fontSize: 12 }} />
                             <YAxis stroke={chartColors.text} tickFormatter={(value) => formatCurrency(value as number, currency)} />
                             <Tooltip
-                                contentStyle={{
-                                    backgroundColor: tooltipColors.background,
-                                    borderColor: tooltipColors.border,
-                                    backdropFilter: 'blur(4px)',
-                                    borderRadius: '0.75rem',
-                                }}
-                                labelStyle={{ color: tooltipColors.label }}
-                                itemStyle={{ fontWeight: 'bold' }}
-                                formatter={(value: number) => formatCurrency(value, currency)}
+                                cursor={{ fill: 'rgba(128, 128, 128, 0.1)' }}
+                                content={<CustomBarTooltip currency={currency} />}
                             />
-                            <Legend wrapperStyle={{ color: tooltipColors.legend }} />
+                            <Legend wrapperStyle={{ color: chartColors.legend }} />
                             <Bar dataKey="Receita" fill={chartColors.barSuccess} radius={[4, 4, 0, 0]} animationDuration={800} />
                             <Bar dataKey="Despesa" fill={chartColors.barDanger} radius={[4, 4, 0, 0]} animationDuration={800} />
                         </BarChart>
@@ -497,6 +572,18 @@ const Dashboard: React.FC<{
 };
 
 // --- TRANSACTIONS PAGE ---
+const PriorityIndicator: React.FC<{ priority?: TransactionPriority }> = ({ priority = TransactionPriority.MEDIUM }) => {
+    const priorityConfig = {
+        [TransactionPriority.HIGH]: { color: 'var(--color-danger)', text: 'Alta' },
+        [TransactionPriority.MEDIUM]: { color: 'var(--color-warning)', text: 'Média' },
+        [TransactionPriority.LOW]: { color: 'var(--color-accent-secondary)', text: 'Baixa' },
+    };
+    const { color, text } = priorityConfig[priority];
+    return (
+      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} title={`Prioridade: ${text}`}></div>
+    );
+};
+
 const TransactionsPage: React.FC<{
     transactions: Transaction[];
     categories: Category[];
@@ -524,6 +611,7 @@ const TransactionsPage: React.FC<{
 }) => {
     
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+    const [sortBy, setSortBy] = useState('date-desc');
 
     const filteredTransactions = useMemo(() => {
         if (selectedMonth === 'all') {
@@ -531,6 +619,33 @@ const TransactionsPage: React.FC<{
         }
         return transactions.filter(t => t.date.startsWith(selectedMonth));
     }, [transactions, selectedMonth]);
+
+    const sortedParentTransactions = useMemo(() => {
+        const parentTransactions = filteredTransactions.filter(t => !t.parentId);
+        const priorityOrder: Record<TransactionPriority, number> = {
+            [TransactionPriority.HIGH]: 3,
+            [TransactionPriority.MEDIUM]: 2,
+            [TransactionPriority.LOW]: 1,
+        };
+
+        return [...parentTransactions].sort((a, b) => {
+            switch (sortBy) {
+                case 'priority-desc':
+                    const priorityA = priorityOrder[a.priority || TransactionPriority.MEDIUM] ?? 0;
+                    const priorityB = priorityOrder[b.priority || TransactionPriority.MEDIUM] ?? 0;
+                    return priorityB - priorityA;
+                case 'amount-desc':
+                    return b.amount - a.amount;
+                case 'amount-asc':
+                    return a.amount - b.amount;
+                case 'date-asc':
+                    return new Date(a.date).getTime() - new Date(b.date).getTime();
+                case 'date-desc':
+                default:
+                    return new Date(b.date).getTime() - new Date(a.date).getTime();
+            }
+        });
+    }, [filteredTransactions, sortBy]);
 
     const toggleExpand = (id: string) => {
         setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
@@ -540,11 +655,12 @@ const TransactionsPage: React.FC<{
         const category = categories.find(c => c.name === t.category);
         const hasSubItems = t.subItems && t.subItems.length > 0;
         const isExpanded = expanded[t.id];
+        const typeBorderColor = t.type === TransactionType.INCOME ? 'border-[var(--color-success)]' : 'border-[var(--color-danger)]';
 
         return (
             <React.Fragment key={t.id}>
-                <tr className={`border-b border-[var(--color-border)] ${!isSubItem ? 'bg-[var(--color-bg-secondary)]' : 'bg-[var(--color-bg-secondary)]/50'}`}>
-                    <td className={`py-3 px-4 ${isSubItem ? 'pl-12' : ''}`}>
+                <tr className={`border-b border-[var(--color-border)] ${!isSubItem ? 'bg-[var(--color-bg-secondary)]' : 'bg-[var(--color-bg-primary)]'}`}>
+                    <td className={`py-3 px-4 border-l-4 ${typeBorderColor} ${isSubItem ? 'pl-12' : ''}`}>
                         <div className="flex items-center gap-3">
                             {!isSubItem && hasSubItems && (
                                 <button onClick={() => toggleExpand(t.id)} className="p-1 rounded-full hover:bg-[var(--color-border)]">
@@ -557,9 +673,10 @@ const TransactionsPage: React.FC<{
                                     <Icon name={category?.icon} className="h-5 w-5" />
                                 </span>
                                 <div>
-                                    <div className="flex items-center gap-1.5">
+                                    <div className="flex items-center gap-2">
+                                        <PriorityIndicator priority={t.priority} />
                                         <p className="font-medium text-[var(--color-text-primary)]">{t.description}</p>
-                                        {isSubItem && t.notes && (
+                                        {t.notes && (
                                             <button 
                                                 onClick={() => onShowNote(t.notes!)} 
                                                 title="Ver anotação" 
@@ -575,7 +692,7 @@ const TransactionsPage: React.FC<{
                             </div>
                         </div>
                     </td>
-                    <td className="py-3 px-4 text-[var(--color-text-secondary)]">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
+                    <td className="py-3 px-4 text-[var(--color-text-secondary)] hidden lg:table-cell">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
                     <td className={`py-3 px-4 text-right font-semibold ${t.type === TransactionType.INCOME ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>
                         {t.type === TransactionType.INCOME ? '+' : '-'} {formatCurrency(t.amount, currency)}
                     </td>
@@ -604,51 +721,154 @@ const TransactionsPage: React.FC<{
         );
     };
 
+    const renderTransactionCard = (t: Transaction, isSubItem: boolean = false) => {
+        const category = categories.find(c => c.name === t.category);
+        const hasSubItems = t.subItems && t.subItems.length > 0;
+        const isExpanded = expanded[t.id];
+        const typeBgColor = t.type === TransactionType.INCOME ? 'bg-[var(--color-success)]' : 'bg-[var(--color-danger)]';
+
+        return (
+            <React.Fragment key={t.id}>
+                <Card className={`p-0 overflow-hidden relative ${isSubItem ? 'ml-4' : ''}`}>
+                    <div className={`absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl ${typeBgColor}`}></div>
+                    <div className="p-4 ml-1.5">
+                        <div className="flex justify-between items-start gap-3">
+                             <div className="flex items-center gap-3 flex-grow min-w-0">
+                                <span className="p-2 bg-[var(--color-border)] rounded-lg self-start">
+                                    <Icon name={category?.icon} className="h-5 w-5" />
+                                </span>
+                                <div className="flex-grow min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <PriorityIndicator priority={t.priority} />
+                                        <p className="font-medium text-[var(--color-text-primary)] break-words">{t.description}</p>
+                                        {t.notes && (
+                                            <button onClick={() => onShowNote(t.notes!)} title="Ver anotação" className="text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] transition-colors flex-shrink-0" aria-label="Ver anotação">
+                                                <Icon name="document_text" className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className="text-sm text-[var(--color-text-secondary)]">{t.category}</p>
+                                    <p className="text-sm text-[var(--color-text-secondary)] mt-1">{new Date(t.date).toLocaleDateString('pt-BR')}</p>
+                                </div>
+                            </div>
+                            <p className={`text-lg font-semibold ${t.type === TransactionType.INCOME ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'} whitespace-nowrap`}>
+                                {t.type === TransactionType.INCOME ? '+' : '-'} {formatCurrency(t.amount, currency)}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-end gap-2 p-2 bg-[var(--color-bg-secondary)]/50">
+                        {!isSubItem && (
+                            <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => onAddTransaction(t.id)} title="Adicionar Subitem">
+                                <Icon name="plus" className="h-4 w-4"/>
+                                <span className="hidden sm:inline">Subitem</span>
+                            </Button>
+                        )}
+                        {!isSubItem && hasSubItems && (
+                            <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => toggleExpand(t.id)}>
+                                {isExpanded ? 'Ocultar' : `Ver Itens (${t.subItems?.length})`}
+                            </Button>
+                        )}
+                        <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => onEditTransaction(t)} title="Editar">
+                            <Icon name="pencil" className="w-4 h-4"/>
+                            <span className="hidden sm:inline">Editar</span>
+                        </Button>
+                        <Button variant="danger" className="px-3 py-1.5 text-xs" onClick={() => onDeleteTransaction(t.id)} title="Excluir">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </Button>
+                    </div>
+                </Card>
+                {!isSubItem && hasSubItems && isExpanded && (
+                    <div className="space-y-3">
+                        {t.subItems!.map(subItem => renderTransactionCard(subItem, true))}
+                    </div>
+                )}
+            </React.Fragment>
+        );
+    };
+
     return (
         <div className="p-4 md:p-8 space-y-6">
-             <div className="flex flex-wrap justify-between items-center gap-4">
+             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)]">Transações</h1>
-                <div className="flex items-center gap-4">
-                    {availableMonths.length > 0 && (
-                        <div className="w-full sm:w-auto sm:max-w-xs">
-                             <Select
-                                value={selectedMonth}
-                                onChange={(e) => onMonthChange(e.target.value)}
-                                aria-label="Filtrar por mês"
-                            >
-                                <option value="all">Todos os Meses</option>
-                                {availableMonths.map(month => (
-                                    <option key={month} value={month}>
-                                        {formatMonthYear(month)}
-                                    </option>
-                                ))}
-                            </Select>
-                        </div>
-                    )}
+                <div className="flex w-full sm:w-auto items-center gap-4">
+                    <div className="flex-grow">
+                         <Select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            aria-label="Ordenar por"
+                            className="w-full"
+                        >
+                            <option value="date-desc">Data (Mais Recente)</option>
+                            <option value="date-asc">Data (Mais Antiga)</option>
+                            <option value="priority-desc">Prioridade (Alta {'>'} Baixa)</option>
+                            <option value="amount-desc">Valor (Maior)</option>
+                            <option value="amount-asc">Valor (Menor)</option>
+                        </Select>
+                    </div>
                     <Button onClick={() => onAddTransaction()} variant="primary" className="whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                        Adicionar
+                        <span className="hidden sm:inline">Adicionar</span>
                     </Button>
                 </div>
             </div>
+
+            {availableMonths.length > 0 && (
+                <div className="w-full sm:w-auto sm:max-w-xs">
+                     <Select
+                        value={selectedMonth}
+                        onChange={(e) => onMonthChange(e.target.value)}
+                        aria-label="Filtrar por mês"
+                        className="w-full"
+                        icon={<Icon name="calendar" className="w-5 h-5" />}
+                    >
+                        <option value="all">Todos os Meses</option>
+                        {availableMonths.map(month => (
+                            <option key={month} value={month}>
+                                {formatMonthYear(month)}
+                            </option>
+                        ))}
+                    </Select>
+                </div>
+            )}
             
-            <div className="overflow-x-auto bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl">
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+                {sortedParentTransactions.length > 0 ? (
+                    sortedParentTransactions.map(t => renderTransactionCard(t))
+                ) : (
+                    <Card className="text-center p-8 text-[var(--color-text-secondary)] flex flex-col items-center gap-4">
+                        <Icon name="archive_box" className="w-16 h-16 text-[var(--color-border)]" />
+                        <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">Nenhuma transação encontrada</h3>
+                        <p>Comece adicionando uma nova despesa ou receita.</p>
+                        <Button onClick={() => onAddTransaction()} variant="primary" className="mt-4">
+                            <Icon name="plus" className="h-5 w-5" /> Adicionar Transação
+                        </Button>
+                    </Card>
+                )}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto bg-[var(--color-bg-glass)] border border-[var(--color-border)] rounded-xl">
                  <table className="min-w-full text-sm">
                     <thead className="border-b border-[var(--color-border)]">
                         <tr>
                             <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">Descrição</th>
-                            <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">Data</th>
+                            <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4 hidden lg:table-cell">Data</th>
                             <th className="text-right font-semibold text-[var(--color-text-secondary)] p-4">Valor</th>
                             <th className="text-right font-semibold text-[var(--color-text-secondary)] p-4">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredTransactions.filter(t => !t.parentId).length > 0 ? (
-                           filteredTransactions.filter(t => !t.parentId).map(t => renderTransactionRow(t))
+                        {sortedParentTransactions.length > 0 ? (
+                           sortedParentTransactions.map(t => renderTransactionRow(t))
                         ) : (
                             <tr>
-                                <td colSpan={4} className="text-center p-8 text-[var(--color-text-secondary)]">
-                                    Nenhuma transação encontrada para este período.
+                                <td colSpan={4}>
+                                    <div className="text-center p-8 text-[var(--color-text-secondary)] flex flex-col items-center gap-4">
+                                        <Icon name="archive_box" className="w-16 h-16 text-[var(--color-border)]" />
+                                        <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">Nenhuma transação encontrada</h3>
+                                        <p>Comece adicionando uma nova despesa ou receita.</p>
+                                    </div>
                                 </td>
                             </tr>
                         )}
@@ -664,23 +884,30 @@ const ReportsPage: React.FC<{ userData: UserData }> = ({ userData }) => {
     const { transactions, currency, theme } = userData;
     const { expenseByCategoryData, monthlyBalanceData } = processChartData(transactions);
     const [activeIndex, setActiveIndex] = useState(0);
+    const [animateCharts, setAnimateCharts] = useState(false);
+
+    // Trigger animation on data change
+    useEffect(() => {
+        // Only trigger if there's data to avoid animation on initial empty load
+        if (transactions.length > 0) {
+            setAnimateCharts(true);
+            const timer = setTimeout(() => setAnimateCharts(false), 1200); // Duration of the CSS animation
+            return () => clearTimeout(timer);
+        }
+    }, [transactions]);
 
     const onPieEnter = useCallback((_: any, index: number) => {
         setActiveIndex(index);
     }, []);
     
-    const chartColors = theme === 'galaxy' 
-        ? ['#9333ea', '#3b82f6', '#10b981', '#f97316', '#ef4444', '#6366f1', '#d946ef', '#0ea5e9']
-        : ['#2563eb', '#16a34a', '#db2777', '#f59e0b', '#dc2626', '#4f46e5', '#9333ea', '#0284c7'];
-        
-    const chartText = theme === 'galaxy' ? '#94a3b8' : '#6b7280';
-    
-    const tooltipColors = {
-        background: theme === 'galaxy' ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-        border: theme === 'galaxy' ? '#475569' : '#e5e7eb',
-        label: theme === 'galaxy' ? '#e2e8f0' : '#1f2937',
-    };
+    const chartColors = {
+        galaxy: ['#9333ea', '#3b82f6', '#10b981', '#f97316', '#ef4444', '#6366f1', '#d946ef', '#0ea5e9'],
+        minimalist: ['#2563eb', '#16a34a', '#db2777', '#f59e0b', '#dc2626', '#4f46e5', '#9333ea', '#0284c7'],
+        barbie: ['#e5007a', '#0891b2', '#db2777', '#f472b6', '#831843', '#22d3ee', '#c026d3', '#0ea5e9'],
+    }[theme];
 
+    const chartText = 'var(--color-text-secondary)';
+    
     const renderActiveShape = (props: any) => {
       const RADIAN = Math.PI / 180;
       const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
@@ -731,18 +958,15 @@ const ReportsPage: React.FC<{ userData: UserData }> = ({ userData }) => {
         <div className="p-4 md:p-8 space-y-8">
             <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)]">Relatórios</h1>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                 <Card>
+                 <Card className={animateCharts ? 'animate-chart-update' : ''}>
                     <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Despesas por Categoria</h2>
                     {expenseByCategoryData.length > 0 ? (
                         <div className="h-96 w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    {/* FIX: The @types/recharts package may have incorrect typings for the Pie component,
-                                        missing the 'activeIndex' prop. Using @ts-ignore to bypass this typing issue,
-                                        as the component works as expected at runtime with this prop. */}
-                                    // FIX: The @ts-ignore directive must be placed on the line immediately preceding the component with the type error.
-                                    // @ts-ignore
+                                    <Tooltip content={<CustomPieTooltip currency={currency} />} />
                                     <Pie
+                                        // @ts-ignore -- The @types/recharts package has incorrect typings for this prop.
                                         activeIndex={activeIndex}
                                         activeShape={renderActiveShape}
                                         data={expenseByCategoryData}
@@ -753,6 +977,10 @@ const ReportsPage: React.FC<{ userData: UserData }> = ({ userData }) => {
                                         fill="#8884d8"
                                         dataKey="value"
                                         onMouseEnter={onPieEnter}
+                                        animationDuration={1200}
+                                        // FIX: Added @ts-ignore for animationEasing prop due to overly restrictive types in recharts.
+                                        // @ts-ignore
+                                        animationEasing="cubic-bezier(0.25, 1, 0.5, 1)"
                                     >
                                         {expenseByCategoryData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
@@ -765,27 +993,31 @@ const ReportsPage: React.FC<{ userData: UserData }> = ({ userData }) => {
                         <p className="text-center p-8 text-[var(--color-text-secondary)]">Não há dados de despesas para exibir.</p>
                     )}
                 </Card>
-                <Card>
+                <Card className={animateCharts ? 'animate-chart-update' : ''}>
                     <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Evolução do Saldo Mensal</h2>
                      {monthlyBalanceData.length > 0 ? (
                         <div className="h-96">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={monthlyBalanceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                     <XAxis dataKey="name" stroke={chartText} />
-                                    <YAxis stroke={chartText} tickFormatter={(value) => formatCurrency(value as number, currency)} />
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: tooltipColors.background,
-                                            borderColor: tooltipColors.border,
-                                            backdropFilter: 'blur(4px)',
-                                            borderRadius: '0.75rem',
-                                        }}
-                                        labelStyle={{ color: tooltipColors.label }}
-                                        formatter={(value: number) => [formatCurrency(value, currency), 'Saldo']}
+                                    <YAxis 
+                                        stroke={chartText} 
+                                        tickFormatter={(value) => formatCurrency(value as number, currency)} 
+                                        width={80}
                                     />
-                                    <Bar dataKey="Saldo" animationDuration={800}>
+                                    <Tooltip
+                                        cursor={{ fill: 'rgba(128, 128, 128, 0.1)' }}
+                                        content={<CustomBalanceTooltip currency={currency} />}
+                                    />
+                                    <Bar
+                                        dataKey="Saldo"
+                                        animationDuration={1200}
+                                        // FIX: Added @ts-ignore for animationEasing prop due to overly restrictive types in recharts.
+                                        // @ts-ignore
+                                        animationEasing="cubic-bezier(0.25, 1, 0.5, 1)"
+                                    >
                                         {monthlyBalanceData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.Saldo >= 0 ? chartColors[2] : chartColors[4]} />
+                                            <Cell key={`cell-${index}`} fill={entry.Saldo >= 0 ? 'var(--color-success)' : 'var(--color-danger)'} />
                                         ))}
                                     </Bar>
                                 </BarChart>
@@ -811,20 +1043,25 @@ const SettingsPage: React.FC<{
     userData: UserData;
     onUpdateSettings: (newSettings: Partial<UserData>) => void;
     userProfile: UserProfile;
-    onUpdateProfile: (newProfile: Partial<UserProfile>) => void;
+    onUpdateProfile: (newProfile: Partial<UserProfile>) => Promise<void>;
 }> = ({ userData, onUpdateSettings, userProfile, onUpdateProfile }) => {
     const [currency, setCurrency] = useState(userData.currency);
     const [theme, setTheme] = useState(userData.theme);
     const [displayName, setDisplayName] = useState(userProfile.displayName);
-    const [email, setEmail] = useState(userProfile.email);
+    const [email, setEmail] = useState(userProfile.email || '');
     const [profilePic, setProfilePic] = useState(userProfile.profilePicture);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
-    const handleSave = () => {
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        setSaveSuccess(false);
         onUpdateSettings({ currency, theme });
-        onUpdateProfile({ displayName, email, profilePicture: profilePic });
-        // In a real app, you'd show a success toast/message
-        alert('Configurações salvas!');
+        await onUpdateProfile({ displayName, email, profilePicture: profilePic });
+        setIsSaving(false);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2500);
     };
     
     const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -866,10 +1103,10 @@ const SettingsPage: React.FC<{
                     </div>
                     <div className="flex-grow space-y-4 w-full">
                         <Input label="Nome de Exibição" value={displayName} onChange={e => setDisplayName(e.target.value)} />
-                        <Input label="E-mail" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+                        <Input label="E-mail (opcional)" type="email" value={email} onChange={e => setEmail(e.target.value)} />
                         <div>
                             <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">Usuário</label>
-                            <p className="w-full bg-[var(--color-bg-primary)] border border-transparent rounded-lg px-3 py-2 text-[var(--color-text-secondary)]">
+                            <p className="w-full bg-transparent border-2 border-transparent rounded-lg px-3 py-2 text-[var(--color-text-secondary)]">
                                 @{userProfile.username} (não pode ser alterado)
                             </p>
                         </div>
@@ -885,16 +1122,17 @@ const SettingsPage: React.FC<{
                         <option value="USD">Dólar Americano ($)</option>
                         <option value="EUR">Euro (€)</option>
                     </Select>
-                    <Select label="Tema Visual" value={theme} onChange={e => setTheme(e.target.value as 'galaxy' | 'minimalist')}>
+                    <Select label="Tema Visual" value={theme} onChange={e => setTheme(e.target.value as 'galaxy' | 'minimalist' | 'barbie')}>
                         <option value="galaxy">Galáxia</option>
                         <option value="minimalist">Minimalista</option>
+                        <option value="barbie">Barbie</option>
                     </Select>
                 </div>
             </Card>
             
              <div className="flex justify-end pt-4">
-                <Button onClick={handleSave} variant="primary">
-                    Salvar Alterações
+                <Button onClick={handleSave} variant="primary" disabled={isSaving || saveSuccess} className="w-40">
+                    {isSaving ? <Spinner /> : saveSuccess ? <><Icon name="check" /> Salvo!</> : 'Salvar Alterações'}
                 </Button>
             </div>
         </div>
@@ -924,9 +1162,9 @@ const FinAssist: React.FC<{
     return (
         <div className="fixed bottom-6 right-6 z-40">
             <details className="group">
-                <summary className="list-none flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-purple-600 to-cyan-500 rounded-full text-white cursor-pointer shadow-2xl shadow-purple-500/30 transform transition-all duration-300 group-open:w-80 group-open:h-[28rem] group-open:rounded-2xl group-open:items-start">
+                <summary className="list-none flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-purple-600 to-cyan-500 rounded-full text-white cursor-pointer shadow-2xl shadow-purple-500/30 transform transition-all duration-300 group-open:h-[28rem] group-open:rounded-2xl group-open:items-start group-open:w-[calc(100vw-3rem)] group-open:max-w-sm sm:group-open:w-80">
                     <div className="transition-opacity duration-200 group-open:opacity-0 group-open:hidden">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" /></svg>
+                        <Icon name="sparkles" className="h-8 w-8" />
                     </div>
                     <div className="absolute top-0 left-0 w-full opacity-0 transition-opacity duration-300 delay-200 group-open:opacity-100 flex flex-col h-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-2xl">
                          <div className="flex items-center justify-between p-3 border-b border-[var(--color-border)]">
@@ -977,20 +1215,29 @@ const FinAssist: React.FC<{
 };
 
 const AdminPanel: React.FC<{
-  onDeleteUser: (username: string) => void;
+  onDeleteUser: (username: string) => Promise<void>;
   onResetUser: (username:string) => void;
 }> = ({ onDeleteUser, onResetUser }) => {
-
+  const [allUsers, setAllUsers] = useState<{[key: string]: UserProfile} | null>(null);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [userToReset, setUserToReset] = useState<string | null>(null);
 
-  const allUsers = storageService.getAllProfiles();
-  const allPasswords = storageService.getAllPasswords();
+  const fetchUsers = useCallback(async () => {
+    setAllUsers(null);
+    const users = await storageService.getAllProfiles();
+    setAllUsers(users);
+  }, []);
 
-  const handleDeleteUser = () => {
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+
+  const handleDeleteUser = async () => {
     if (userToDelete) {
-      onDeleteUser(userToDelete);
+      await onDeleteUser(userToDelete);
       setUserToDelete(null);
+      await fetchUsers();
     }
   };
   
@@ -1000,6 +1247,17 @@ const AdminPanel: React.FC<{
       setUserToReset(null);
     }
   }
+  
+  if (allUsers === null) {
+      return (
+        <div className="p-4 md:p-8 space-y-8 flex justify-center items-center h-full">
+            <div className="text-center">
+                <Spinner />
+                <p className="mt-2 text-[var(--color-text-secondary)]">Carregando usuários...</p>
+            </div>
+        </div>
+      )
+  }
 
   return (
     <div className="p-4 md:p-8 space-y-8">
@@ -1007,14 +1265,41 @@ const AdminPanel: React.FC<{
 
         <Card>
             <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Gerenciamento de Usuários</h2>
-             <div className="overflow-x-auto">
+             
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+                {Object.entries(allUsers).map(([username, profile]: [string, UserProfile]) => {
+                    if (username === 'admin') return null;
+                    return (
+                        <div key={username} className="bg-[var(--color-bg-secondary)] p-4 rounded-lg border border-[var(--color-border)]">
+                            <div className="flex justify-between items-start">
+                                <div className="min-w-0">
+                                    <p className="font-bold text-[var(--color-text-primary)] truncate">{profile.displayName}</p>
+                                    <p className="text-sm font-mono text-[var(--color-text-secondary)]">@{username}</p>
+                                    <p className="text-sm text-[var(--color-text-secondary)] mt-1 truncate">{profile.email || 'E-mail não informado'}</p>
+                                </div>
+                            </div>
+                            <div className="flex justify-end items-center gap-2 mt-3 pt-3 border-t border-[var(--color-border)]">
+                                <Button variant="secondary" onClick={() => setUserToReset(username)} title="Resetar Dados do Usuário" className="p-2">
+                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M4 4l16 16" /></svg>
+                                </Button>
+                                <Button variant="danger" onClick={() => setUserToDelete(username)} title="Excluir Usuário" className="p-2">
+                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </Button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
                  <table className="min-w-full text-sm">
                     <thead className="border-b border-[var(--color-border)]">
                         <tr>
                             <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">Usuário</th>
                             <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">Nome de Exibição</th>
                             <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">E-mail</th>
-                            <th className="text-center font-semibold text-[var(--color-text-secondary)] p-4">Verificado</th>
                             <th className="text-right font-semibold text-[var(--color-text-secondary)] p-4">Ações</th>
                         </tr>
                     </thead>
@@ -1025,12 +1310,7 @@ const AdminPanel: React.FC<{
                             <tr key={username} className="border-b border-[var(--color-border)]">
                                 <td className="p-4 font-mono text-[var(--color-text-secondary)]">@{username}</td>
                                 <td className="p-4 text-[var(--color-text-primary)]">{profile.displayName}</td>
-                                <td className="p-4 text-[var(--color-text-secondary)]">{profile.email}</td>
-                                <td className="p-4 text-center">
-                                    {profile.isVerified 
-                                      ? <Icon name="check" className="h-5 w-5 text-green-400 mx-auto" /> 
-                                      : <Icon name="x_mark" className="h-5 w-5 text-red-400 mx-auto" />}
-                                </td>
+                                <td className="p-4 text-[var(--color-text-secondary)]">{profile.email || '-'}</td>
                                 <td className="p-4 text-right">
                                     <div className="flex justify-end items-center gap-2">
                                         <Button 
@@ -1039,7 +1319,7 @@ const AdminPanel: React.FC<{
                                           title="Resetar Dados do Usuário"
                                           className="p-2"
                                         >
-                                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h5M20 20v-5h-5M4 4l16 16" /></svg>
+                                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M4 4l16 16" /></svg>
                                         </Button>
                                         <Button 
                                           variant="danger" 
@@ -1047,7 +1327,7 @@ const AdminPanel: React.FC<{
                                           title="Excluir Usuário"
                                           className="p-2"
                                         >
-                                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                         </Button>
                                     </div>
                                 </td>
@@ -1115,7 +1395,7 @@ const IOSInstallPrompt: React.FC = () => {
     }
 
     return (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-md bg-[var(--color-bg-card)]/95 backdrop-blur-lg text-[var(--color-text-primary)] p-4 rounded-xl shadow-2xl z-50 flex items-center gap-4 animate-slide-up border border-[var(--color-border)]">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-md bg-[var(--color-bg-glass)]/95 backdrop-blur-lg text-[var(--color-text-primary)] p-4 rounded-xl shadow-2xl z-50 flex items-center gap-4 animate-slide-up border border-[var(--color-border)]">
             <img src="logo.svg" alt="ControlFin Logo" className="w-14 h-14 rounded-lg flex-shrink-0"/>
             <div className="flex-grow">
                 <p className="font-bold">Instale o ControlFin no seu aparelho!</p>
@@ -1165,69 +1445,65 @@ const App: React.FC = () => {
 
   // Load user from session storage on mount
   useEffect(() => {
-    const loggedInUser = sessionStorage.getItem('controlFin_currentUser');
-    if (loggedInUser) {
-      const profile = storageService.getAllProfiles()[loggedInUser];
-      const data = storageService.getUserData(loggedInUser);
-      if (profile && data) {
-        setCurrentUser(profile);
-        setUserData(data);
-        document.documentElement.setAttribute('data-theme', data.theme);
-      }
-    }
+    const loadInitialUser = async () => {
+        const loggedInUser = sessionStorage.getItem('controlFin_currentUser');
+        if (loggedInUser) {
+            const allProfiles = await storageService.getAllProfiles();
+            const profile = allProfiles[loggedInUser];
+            const data = await storageService.getUserData(loggedInUser);
+            if (profile && data) {
+                setCurrentUser(profile);
+                setUserData(data);
+                document.documentElement.setAttribute('data-theme', data.theme);
+            } else {
+                // Data inconsistency, log out
+                sessionStorage.removeItem('controlFin_currentUser');
+            }
+        }
+    };
+    loadInitialUser();
   }, []);
   
   // --- AUTH LOGIC ---
   
-  const handleRegister = async (username: string, password: string, email: string): Promise<string> => {
-    const allProfiles = storageService.getAllProfiles();
+  const handleRegister = async (username: string, password: string) => {
+    const allProfiles = await storageService.getAllProfiles();
     if (allProfiles[username]) {
       throw new Error("Este nome de usuário já existe.");
     }
-    if (Object.values(allProfiles).some((p: UserProfile) => p.email === email)) {
-      throw new Error("Este e-mail já está em uso.");
-    }
-    
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     
     const newUserProfile: UserProfile = {
       username,
       displayName: username,
-      email,
       registeredAt: new Date().toISOString(),
-      isVerified: false,
-      verificationCode,
     };
     
-    const allPasswords = storageService.getAllPasswords();
+    const allPasswords = await storageService.getAllPasswords();
     
     // In a real app, hash the password. Here we store it in plain text for simplicity.
     allPasswords[username] = password;
     allProfiles[username] = newUserProfile;
     
-    storageService.saveAllProfiles(allProfiles);
-    storageService.saveAllPasswords(allPasswords);
+    await storageService.saveAllProfiles(allProfiles);
+    await storageService.saveAllPasswords(allPasswords);
     
-    return verificationCode;
+    // Automatically log in the user after registration
+    await handleLogin(username, password);
   };
   
   const handleLogin = async (username: string, password: string) => {
-    const allProfiles = storageService.getAllProfiles();
-    const allPasswords = storageService.getAllPasswords();
+    const allProfiles = await storageService.getAllProfiles();
+    const allPasswords = await storageService.getAllPasswords();
     const profile = allProfiles[username];
     
     if (!profile || allPasswords[username] !== password) {
       throw new Error("Usuário ou senha inválidos.");
     }
-    
-    if (!profile.isVerified) {
-        throw new Error("Sua conta não foi verificada. Por favor, verifique seu e-mail.");
-    }
 
-    let data = storageService.getUserData(username);
+    let data = await storageService.getUserData(username);
     if (!data) {
       data = { ...DEFAULT_USER_DATA, categories: [...INITIAL_CATEGORIES] }; // ensure fresh copy
-      storageService.saveUserData(username, data);
+      await storageService.saveUserData(username, data);
     }
     
     setCurrentUser(profile);
@@ -1236,72 +1512,23 @@ const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', data.theme);
   };
   
-  const handleVerifyEmail = async (username: string, code: string) => {
-    const allProfiles = storageService.getAllProfiles();
-    const profile = allProfiles[username];
-    
-    if (profile && profile.verificationCode === code) {
-        profile.isVerified = true;
-        delete profile.verificationCode;
-        storageService.saveAllProfiles(allProfiles);
-        
-        // Auto-login after verification
-        const allPasswords = storageService.getAllPasswords();
-        await handleLogin(username, allPasswords[username]);
-    } else {
-        throw new Error("Código de verificação inválido.");
-    }
-  };
-  
-  const handleForgotPassword = async (email: string): Promise<string | null> => {
-    const allProfiles = storageService.getAllProfiles();
-    const profile = Object.values(allProfiles).find((p: UserProfile) => p.email === email);
-    
-    if (profile) {
-      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-      profile.verificationCode = resetCode; // Reuse verification code for password reset
-      storageService.saveAllProfiles(allProfiles);
-      return resetCode;
-    }
-    return null;
-  };
-  
-  const handleResetPassword = async (email: string, code: string, newPassword: string) => {
-    const allProfiles = storageService.getAllProfiles();
-    const profile = Object.values(allProfiles).find((p: UserProfile) => p.email === email);
-
-    if (profile && profile.verificationCode === code) {
-        const allPasswords = storageService.getAllPasswords();
-        allPasswords[profile.username] = newPassword;
-        delete profile.verificationCode;
-        
-        storageService.saveAllProfiles(allProfiles);
-        storageService.saveAllPasswords(allPasswords);
-    } else {
-        throw new Error("Código de recuperação inválido.");
-    }
-  };
-  
   const handleLogout = () => {
     setCurrentUser(null);
+    setUserData(DEFAULT_USER_DATA);
     sessionStorage.removeItem('controlFin_currentUser');
   };
   
   // --- ADMIN LOGIC ---
-  const handleDeleteUser = (username: string) => {
-    const allProfiles = storageService.getAllProfiles();
-    const allPasswords = storageService.getAllPasswords();
+  const handleDeleteUser = async (username: string) => {
+    const allProfiles = await storageService.getAllProfiles();
+    const allPasswords = await storageService.getAllPasswords();
     
     delete allProfiles[username];
     delete allPasswords[username];
     
-    storageService.saveAllProfiles(allProfiles);
-    storageService.saveAllPasswords(allPasswords);
-    storageService.removeUserData(username);
-    
-    // Force a re-render of the admin panel
-    setCurrentPage('Admin Panel'); 
-    setTimeout(() => setCurrentPage('Admin Panel'), 0);
+    await storageService.saveAllProfiles(allProfiles);
+    await storageService.saveAllPasswords(allPasswords);
+    await storageService.removeUserData(username);
   };
   
   const handleResetUserData = (username: string) => {
@@ -1311,10 +1538,13 @@ const App: React.FC = () => {
 
   // --- DATA SYNC ---
   useEffect(() => {
-    if (currentUser) {
-      storageService.saveUserData(currentUser.username, userData);
-      document.documentElement.setAttribute('data-theme', userData.theme);
-    }
+    const syncData = async () => {
+        if (currentUser) {
+          await storageService.saveUserData(currentUser.username, userData);
+          document.documentElement.setAttribute('data-theme', userData.theme);
+        }
+    };
+    syncData();
   }, [userData, currentUser]);
   
   // --- TRANSACTIONS LOGIC ---
@@ -1362,9 +1592,6 @@ const App: React.FC = () => {
           return t;
       });
       
-      // Sort transactions by date (most recent first)
-      newTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
       return { ...prev, transactions: newTransactions };
     });
 
@@ -1443,12 +1670,12 @@ const App: React.FC = () => {
       setUserData(prev => ({...prev, ...newSettings}));
   };
   
-  const handleUpdateProfile = (newProfile: Partial<UserProfile>) => {
+  const handleUpdateProfile = async (newProfile: Partial<UserProfile>) => {
       if (!currentUser) return;
-      const allProfiles = storageService.getAllProfiles();
+      const allProfiles = await storageService.getAllProfiles();
       const updatedProfile = { ...allProfiles[currentUser.username], ...newProfile };
       allProfiles[currentUser.username] = updatedProfile;
-      storageService.saveAllProfiles(allProfiles);
+      await storageService.saveAllProfiles(allProfiles);
       setCurrentUser(updatedProfile);
   };
   
@@ -1479,10 +1706,11 @@ const App: React.FC = () => {
   
   const formatMonthYear = (month: string) => {
       const [year, monthNum] = month.split('-');
-      return new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleString('pt-BR', {
+      const formattedDate = new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleString('pt-BR', {
           month: 'long',
           year: 'numeric',
       });
+      return formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
   };
 
   useEffect(() => {
@@ -1538,9 +1766,6 @@ const App: React.FC = () => {
     return <LoginScreen 
              onLogin={handleLogin} 
              onRegister={handleRegister}
-             onVerifyEmail={handleVerifyEmail}
-             onForgotPassword={handleForgotPassword}
-             onResetPassword={handleResetPassword}
            />;
   }
 
@@ -1553,11 +1778,16 @@ const App: React.FC = () => {
           userProfile={currentUser}
           isOpen={isSidebarOpen}
       />
-      {isSidebarOpen && <div onClick={() => setSidebarOpen(false)} className="fixed inset-0 bg-black/50 z-40 md:hidden"></div>}
+      <div 
+        onClick={() => setSidebarOpen(false)} 
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300 ease-in-out ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+      ></div>
       <div className="flex-1 flex flex-col overflow-y-auto">
         <Header pageTitle={currentPage} onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1">
-          {renderPage()}
+          <div key={currentPage} className="animate-page-transition">
+            {renderPage()}
+          </div>
         </main>
       </div>
 

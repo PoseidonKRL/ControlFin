@@ -13,8 +13,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center backdrop-blur-sm">
-      <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl shadow-2xl shadow-purple-500/10 w-full max-w-lg m-4 transform transition-all duration-300 scale-95 opacity-0 animate-fade-in-scale">
+    <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center backdrop-blur-md">
+      <div className="bg-[var(--color-bg-glass)] border border-[var(--color-border)] rounded-xl shadow-2xl shadow-purple-500/10 w-full max-w-lg m-4 transform transition-all duration-300 scale-95 opacity-0 animate-fade-in-scale">
         <div className="flex justify-between items-center p-4 border-b border-[var(--color-border)]">
           <h3 className="text-xl font-bold text-[var(--color-text-primary)]">{title}</h3>
           <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors">
@@ -42,12 +42,12 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', className, ...props }) => {
-  const baseClasses = 'px-4 py-2 rounded-lg font-semibold transition-all duration-200 transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg-primary)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseClasses = 'px-4 py-2 rounded-lg font-semibold transition-all duration-200 transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg-primary)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg';
   
   const variantClasses = {
-    primary: 'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] active:scale-95 focus:ring-[var(--color-accent)]',
+    primary: 'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] active:scale-95 focus:ring-[var(--color-accent)] shadow-[var(--color-accent)]/20 hover:shadow-[var(--color-accent)]/30',
     secondary: 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:bg-[rgba(128,128,128,0.2)] active:scale-95 focus:ring-gray-500 border border-[var(--color-border)]',
-    danger: 'bg-[var(--color-danger-strong)] text-white hover:opacity-90 active:scale-95 focus:ring-[var(--color-danger-strong)]',
+    danger: 'bg-[var(--color-danger-strong)] text-white hover:opacity-90 active:scale-95 focus:ring-[var(--color-danger-strong)] shadow-red-500/20 hover:shadow-red-500/30',
   };
 
   return (
@@ -66,7 +66,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({label, ...
         {label && <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{label}</label>}
         <input
             ref={ref}
-            className="w-full bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
+            className="w-full bg-transparent border-2 border-[var(--color-border)] rounded-lg px-3 py-2 text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none focus:ring-0 focus:border-[var(--color-accent)] transition-all"
             {...props}
         />
     </div>
@@ -76,17 +76,30 @@ Input.displayName = 'Input';
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
     label?: string;
+    icon?: React.ReactNode;
 }
 
-export const Select: React.FC<SelectProps> = ({label, children, ...props}) => (
+export const Select: React.FC<SelectProps> = ({label, children, icon, className, ...props}) => (
     <div>
         {label && <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{label}</label>}
-        <select
-             className="w-full bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-            {...props}
-        >
-            {children}
-        </select>
+        <div className="relative group">
+            {icon && (
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-[var(--color-text-secondary)] group-focus-within:text-[var(--color-accent)] transition-colors">
+                    {icon}
+                </div>
+            )}
+            <select
+                 className={`w-full bg-transparent border border-[var(--color-border)] rounded-lg py-2.5 text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] hover:border-[var(--color-accent)]/50 transition-all appearance-none ${icon ? 'pl-10' : 'pl-4'} pr-10 ${className}`}
+                {...props}
+            >
+                {children}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                 <svg className="w-5 h-5 text-[var(--color-text-secondary)] transition-transform duration-200 group-focus-within:rotate-180" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                 </svg>
+            </div>
+        </div>
     </div>
 );
 
@@ -98,7 +111,7 @@ interface CardProps {
 
 export const Card: React.FC<CardProps> = ({ children, className }) => {
   return (
-    <div className={`bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl shadow-lg p-6 ${className}`}>
+    <div className={`bg-[var(--color-bg-glass)] backdrop-blur-lg border border-[var(--color-border)] rounded-xl shadow-lg p-6 transition-all duration-300 hover:border-[var(--color-accent)]/50 ${className}`}>
       {children}
     </div>
   );
