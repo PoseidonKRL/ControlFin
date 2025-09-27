@@ -349,10 +349,10 @@ const Sidebar: React.FC<{
                         <button
                             key={page}
                             onClick={() => onNavigate(page)}
-                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg text-left text-lg transition-all relative ${
+                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg text-left text-lg transition-colors relative ${
                                 isActive
                                     ? 'bg-purple-600/20 text-white font-semibold'
-                                    : 'text-[var(--color-text-primary)] opacity-75 hover:bg-[var(--color-bg-secondary)] hover:opacity-100'
+                                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)]'
                             }`}
                         >
                             {isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-[var(--color-accent-secondary)] rounded-r-full"></div>}

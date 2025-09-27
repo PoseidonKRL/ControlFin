@@ -34,25 +34,17 @@ export const processChartData = (transactions: Transaction[]) => {
   });
 
   const sortedMonths = Object.keys(monthlyData).sort();
-  
-  const formatDate = (month: string) => 
-      new Date(month + '-02').toLocaleString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '');
 
   const incomeVsExpenseData = sortedMonths.map(month => ({
-    name: formatDate(month),
+    name: new Date(month + '-02').toLocaleString('default', { month: 'short', year: '2-digit' }),
     Receita: monthlyData[month].income,
     Despesa: monthlyData[month].expense,
   }));
 
-  let cumulativeBalance = 0;
-  const monthlyBalanceData = sortedMonths.map(month => {
-    const monthlyNet = monthlyData[month].income - monthlyData[month].expense;
-    cumulativeBalance += monthlyNet;
-    return {
-      name: formatDate(month),
-      Saldo: cumulativeBalance,
-    };
-  });
+  const monthlyBalanceData = sortedMonths.map(month => ({
+    name: new Date(month + '-02').toLocaleString('default', { month: 'short', year: '2-digit' }),
+    Saldo: monthlyData[month].income - monthlyData[month].expense,
+  }));
 
   const expenseByCategoryData = Object.entries(categoryData).map(([name, value]) => ({
     name,
