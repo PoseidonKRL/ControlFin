@@ -4,13 +4,14 @@
   "description": "Um aplicativo de gerenciamento financeiro pessoal.",
   "main": "index.tsx",
   "scripts": {
-    "build": "rm -rf dist && mkdir dist && esbuild index.tsx --bundle --outfile=dist/bundle.js --jsx=automatic --minify --define:process.env.API_KEY='\"'\"$API_KEY\"'\"' --define:process.env.FIREBASE_API_KEY='\"'\"$FIREBASE_API_KEY\"'\"' --define:process.env.FIREBASE_AUTH_DOMAIN='\"'\"$FIREBASE_AUTH_DOMAIN\"'\"' --define:process.env.FIREBASE_PROJECT_ID='\"'\"$FIREBASE_PROJECT_ID\"'\"' --define:process.env.FIREBASE_STORAGE_BUCKET='\"'\"$FIREBASE_STORAGE_BUCKET\"'\"' --define:process.env.FIREBASE_MESSAGING_SENDER_ID='\"'\"$FIREBASE_MESSAGING_SENDER_ID\"'\"' --define:process.env.FIREBASE_APP_ID='\"'\"$FIREBASE_APP_ID\"'\"' --define:process.env.FIREBASE_MEASUREMENT_ID='\"'\"$FIREBASE_MEASUREMENT_ID\"'\"' && cp index.html manifest.json sw.js logo.svg dist/"
+    "build": "rm -rf dist && mkdir dist && esbuild index.tsx --bundle --outfile=dist/bundle.js --jsx=automatic --minify --external:firebase/* --define:process.env.API_KEY='\"'\"$API_KEY\"'\"' --define:process.env.FIREBASE_API_KEY='\"'\"$FIREBASE_API_KEY\"'\"' --define:process.env.FIREBASE_AUTH_DOMAIN='\"'\"$FIREBASE_AUTH_DOMAIN\"'\"' --define:process.env.FIREBASE_PROJECT_ID='\"'\"$FIREBASE_PROJECT_ID\"'\"' --define:process.env.FIREBASE_STORAGE_BUCKET='\"'\"$FIREBASE_STORAGE_BUCKET\"'\"' --define:process.env.FIREBASE_MESSAGING_SENDER_ID='\"'\"$FIREBASE_MESSAGING_SENDER_ID\"'\"' --define:process.env.FIREBASE_APP_ID='\"'\"$FIREBASE_APP_ID\"'\"' --define:process.env.FIREBASE_MEASUREMENT_ID='\"'\"$FIREBASE_MEASUREMENT_ID\"'\"' && cp index.html manifest.json sw.js logo.svg dist/"
   },
   "dependencies": {
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "recharts": "^3.2.1",
-    "@google/genai": "^1.20.0"
+    "@google/genai": "^1.20.0",
+    "firebase": "^10.12.2"
   },
   "devDependencies": {
     "esbuild": "^0.23.0",
