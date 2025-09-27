@@ -7,6 +7,9 @@ import { getFinAssistResponse } from './services/geminiService';
 import * as storageService from './services/storageService';
 import { Modal, Button, Input, Select, Card, Spinner, ConfirmationModal, IconPickerModal } from './components/ui';
 import { Icon, availableIcons } from './components/icons';
+import { auth } from './services/firebase';
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, User } from 'firebase/auth';
+
 
 // --- INITIAL DATA ---
 const INITIAL_CATEGORIES: Category[] = [
@@ -165,11 +168,11 @@ const CustomBalanceTooltip: React.FC<{ active?: boolean; payload?: any[]; label?
 type AuthView = 'login' | 'register';
 
 const LoginScreen: React.FC<{
-  onLogin: (username: string, password: string) => Promise<void>;
-  onRegister: (username: string, password: string) => Promise<void>;
+  onLogin: (email: string, password: string) => Promise<void>;
+  onRegister: (email: string, password: string) => Promise<void>;
 }> = ({ onLogin, onRegister }) => {
   const [view, setView] = useState<AuthView>('login');
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -180,7 +183,7 @@ const LoginScreen: React.FC<{
     setError('');
     setIsLoading(false);
     setInfoMessage('');
-    setUsername('');
+    setEmail('');
     setPassword('');
     setConfirmPassword('');
   };
@@ -199,17 +202,40 @@ const LoginScreen: React.FC<{
     try {
       switch(view) {
         case 'login':
-          await onLogin(username, password);
+          await onLogin(email, password);
           break;
         case 'register':
           if (password !== confirmPassword) throw new Error("As senhas não coincidem.");
           if (password.length < 6) throw new Error("A senha deve ter pelo menos 6 caracteres.");
-          await onRegister(username, password);
+          await onRegister(email, password);
           // User is auto-logged in by parent component
           break;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.');
+      let errorMessage = 'Ocorreu um erro desconhecido.';
+      if (err instanceof Error) {
+        // Map Firebase error codes to user-friendly messages
+        if ('code' in err) {
+            switch ((err as any).code) {
+                case 'auth/invalid-email':
+                    errorMessage = 'O formato do e-mail é inválido.';
+                    break;
+                case 'auth/user-not-found':
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential':
+                    errorMessage = 'E-mail ou senha inválidos.';
+                    break;
+                case 'auth/email-already-in-use':
+                    errorMessage = 'Este e-mail já está em uso.';
+                    break;
+                default:
+                    errorMessage = err.message;
+            }
+        } else {
+            errorMessage = err.message;
+        }
+      }
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -221,7 +247,7 @@ const LoginScreen: React.FC<{
         return (
           <>
             <h2 className="text-2xl font-bold">Login</h2>
-            <Input type="text" placeholder="Usuário" value={username} onChange={e => setUsername(e.target.value)} required disabled={isLoading} />
+            <Input type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} />
             <Input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading} />
             <Button type="submit" variant="primary" disabled={isLoading}>{isLoading ? <Spinner /> : 'Entrar'}</Button>
             <div className="flex justify-center text-sm mt-4 text-slate-400">
@@ -233,7 +259,7 @@ const LoginScreen: React.FC<{
         return (
           <>
             <h2 className="text-2xl font-bold">Criar Conta</h2>
-            <Input type="text" placeholder="Usuário" value={username} onChange={e => setUsername(e.target.value)} required disabled={isLoading} autoCapitalize="none" />
+            <Input type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} autoCapitalize="none" />
             <Input type="password" placeholder="Senha (mín. 6 caracteres)" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading} />
             <Input type="password" placeholder="Confirmar Senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required disabled={isLoading} />
             <Button type="submit" variant="primary" disabled={isLoading}>{isLoading ? <Spinner /> : 'Cadastrar e Entrar'}</Button>
@@ -294,12 +320,11 @@ const Sidebar: React.FC<{
     userProfile: UserProfile;
     isOpen: boolean;
 }> = ({ currentPage, onNavigate, onLogout, userProfile, isOpen }) => {
-    const navItems: { page: Page; label: string; icon: React.ReactNode, adminOnly?: boolean }[] = [
+    const navItems: { page: Page; label: string; icon: React.ReactNode }[] = [
         { page: 'Dashboard', label: 'Painel', icon: <Icon name="home" className="h-6 w-6" /> },
         { page: 'Transactions', label: 'Transações', icon: <Icon name="credit_card" className="h-6 w-6" /> },
         { page: 'Reports', label: 'Relatórios', icon: <Icon name="book_open" className="h-6 w-6" /> },
         { page: 'Settings', label: 'Configurações', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
-        { page: 'Admin Panel', label: 'Painel Admin', icon: <Icon name="shield_check" className="h-6 w-6" />, adminOnly: true }
     ];
 
     return (
@@ -309,7 +334,7 @@ const Sidebar: React.FC<{
                     <img src={userProfile.profilePicture} alt="Foto de perfil" className="w-10 h-10 rounded-full object-cover" />
                 ) : (
                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-cyan-400 flex items-center justify-center font-bold text-slate-900 text-lg">
-                        {userProfile.displayName.charAt(0)}
+                        {userProfile.displayName.charAt(0).toUpperCase()}
                     </div>
                 )}
                 <div>
@@ -318,8 +343,7 @@ const Sidebar: React.FC<{
                 </div>
             </div>
             <nav className="flex-grow space-y-2">
-                {navItems.map(({ page, label, icon, adminOnly }) => {
-                    if (adminOnly && userProfile.username !== 'admin') return null;
+                {navItems.map(({ page, label, icon }) => {
                     const isActive = currentPage === page;
                     return (
                         <button
@@ -1043,22 +1067,28 @@ const SettingsPage: React.FC<{
     userData: UserData;
     onUpdateSettings: (newSettings: Partial<UserData>) => void;
     userProfile: UserProfile;
-    onUpdateProfile: (newProfile: Partial<UserProfile>) => Promise<void>;
+    onUpdateProfile: (newProfile: Partial<Omit<UserProfile, 'uid'>>) => Promise<void>;
 }> = ({ userData, onUpdateSettings, userProfile, onUpdateProfile }) => {
     const [currency, setCurrency] = useState(userData.currency);
     const [theme, setTheme] = useState(userData.theme);
     const [displayName, setDisplayName] = useState(userProfile.displayName);
-    const [email, setEmail] = useState(userProfile.email || '');
     const [profilePic, setProfilePic] = useState(userProfile.profilePicture);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
+    useEffect(() => {
+        setDisplayName(userProfile.displayName);
+        setProfilePic(userProfile.profilePicture);
+        setCurrency(userData.currency);
+        setTheme(userData.theme);
+    }, [userProfile, userData]);
+
     const handleSave = async () => {
         setIsSaving(true);
         setSaveSuccess(false);
         onUpdateSettings({ currency, theme });
-        await onUpdateProfile({ displayName, email, profilePicture: profilePic });
+        await onUpdateProfile({ displayName, profilePicture: profilePic });
         setIsSaving(false);
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2500);
@@ -1067,6 +1097,8 @@ const SettingsPage: React.FC<{
     const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+            // In a real app, you'd upload this to Firebase Storage and get a URL.
+            // For simplicity, we'll continue using base64, which can be stored in Firestore/Auth.
             const reader = new FileReader();
             reader.onloadend = () => {
                 setProfilePic(reader.result as string);
@@ -1088,7 +1120,7 @@ const SettingsPage: React.FC<{
                                 <img src={profilePic} alt="Foto de perfil" className="w-full h-full rounded-full object-cover" />
                              ) : (
                                 <div className="w-full h-full rounded-full bg-gradient-to-tr from-purple-500 to-cyan-400 flex items-center justify-center font-bold text-slate-900 text-5xl">
-                                    {displayName.charAt(0)}
+                                    {displayName.charAt(0).toUpperCase()}
                                 </div>
                              )}
                              <button 
@@ -1103,11 +1135,10 @@ const SettingsPage: React.FC<{
                     </div>
                     <div className="flex-grow space-y-4 w-full">
                         <Input label="Nome de Exibição" value={displayName} onChange={e => setDisplayName(e.target.value)} />
-                        <Input label="E-mail (opcional)" type="email" value={email} onChange={e => setEmail(e.target.value)} />
                         <div>
-                            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">Usuário</label>
+                            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">E-mail</label>
                             <p className="w-full bg-transparent border-2 border-transparent rounded-lg px-3 py-2 text-[var(--color-text-secondary)]">
-                                @{userProfile.username} (não pode ser alterado)
+                                {userProfile.email} (não pode ser alterado)
                             </p>
                         </div>
                     </div>
@@ -1214,157 +1245,6 @@ const FinAssist: React.FC<{
     );
 };
 
-const AdminPanel: React.FC<{
-  onDeleteUser: (username: string) => Promise<void>;
-  onResetUser: (username:string) => void;
-}> = ({ onDeleteUser, onResetUser }) => {
-  const [allUsers, setAllUsers] = useState<{[key: string]: UserProfile} | null>(null);
-  const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  const [userToReset, setUserToReset] = useState<string | null>(null);
-
-  const fetchUsers = useCallback(async () => {
-    setAllUsers(null);
-    const users = await storageService.getAllProfiles();
-    setAllUsers(users);
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-
-  const handleDeleteUser = async () => {
-    if (userToDelete) {
-      await onDeleteUser(userToDelete);
-      setUserToDelete(null);
-      await fetchUsers();
-    }
-  };
-  
-  const handleResetUser = () => {
-    if (userToReset) {
-      onResetUser(userToReset);
-      setUserToReset(null);
-    }
-  }
-  
-  if (allUsers === null) {
-      return (
-        <div className="p-4 md:p-8 space-y-8 flex justify-center items-center h-full">
-            <div className="text-center">
-                <Spinner />
-                <p className="mt-2 text-[var(--color-text-secondary)]">Carregando usuários...</p>
-            </div>
-        </div>
-      )
-  }
-
-  return (
-    <div className="p-4 md:p-8 space-y-8">
-        <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)]">Painel do Administrador</h1>
-
-        <Card>
-            <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">Gerenciamento de Usuários</h2>
-             
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-4">
-                {Object.entries(allUsers).map(([username, profile]: [string, UserProfile]) => {
-                    if (username === 'admin') return null;
-                    return (
-                        <div key={username} className="bg-[var(--color-bg-secondary)] p-4 rounded-lg border border-[var(--color-border)]">
-                            <div className="flex justify-between items-start">
-                                <div className="min-w-0">
-                                    <p className="font-bold text-[var(--color-text-primary)] truncate">{profile.displayName}</p>
-                                    <p className="text-sm font-mono text-[var(--color-text-secondary)]">@{username}</p>
-                                    <p className="text-sm text-[var(--color-text-secondary)] mt-1 truncate">{profile.email || 'E-mail não informado'}</p>
-                                </div>
-                            </div>
-                            <div className="flex justify-end items-center gap-2 mt-3 pt-3 border-t border-[var(--color-border)]">
-                                <Button variant="secondary" onClick={() => setUserToReset(username)} title="Resetar Dados do Usuário" className="p-2">
-                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M4 4l16 16" /></svg>
-                                </Button>
-                                <Button variant="danger" onClick={() => setUserToDelete(username)} title="Excluir Usuário" className="p-2">
-                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                </Button>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-                 <table className="min-w-full text-sm">
-                    <thead className="border-b border-[var(--color-border)]">
-                        <tr>
-                            <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">Usuário</th>
-                            <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">Nome de Exibição</th>
-                            <th className="text-left font-semibold text-[var(--color-text-secondary)] p-4">E-mail</th>
-                            <th className="text-right font-semibold text-[var(--color-text-secondary)] p-4">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {Object.entries(allUsers).map(([username, profile]: [string, UserProfile]) => {
-                          if (username === 'admin') return null; // Can't edit admin
-                          return (
-                            <tr key={username} className="border-b border-[var(--color-border)]">
-                                <td className="p-4 font-mono text-[var(--color-text-secondary)]">@{username}</td>
-                                <td className="p-4 text-[var(--color-text-primary)]">{profile.displayName}</td>
-                                <td className="p-4 text-[var(--color-text-secondary)]">{profile.email || '-'}</td>
-                                <td className="p-4 text-right">
-                                    <div className="flex justify-end items-center gap-2">
-                                        <Button 
-                                          variant="secondary" 
-                                          onClick={() => setUserToReset(username)}
-                                          title="Resetar Dados do Usuário"
-                                          className="p-2"
-                                        >
-                                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M4 4l16 16" /></svg>
-                                        </Button>
-                                        <Button 
-                                          variant="danger" 
-                                          onClick={() => setUserToDelete(username)}
-                                          title="Excluir Usuário"
-                                          className="p-2"
-                                        >
-                                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                        </Button>
-                                    </div>
-                                </td>
-                            </tr>
-                          )
-                        })}
-                    </tbody>
-                 </table>
-             </div>
-        </Card>
-        
-        <ConfirmationModal
-            isOpen={!!userToDelete}
-            onClose={() => setUserToDelete(null)}
-            onConfirm={handleDeleteUser}
-            title="Confirmar Exclusão de Usuário"
-            confirmText="Excluir"
-            confirmVariant="danger"
-        >
-          Você tem certeza que deseja excluir permanentemente o usuário <strong>@{userToDelete}</strong> e todos os seus dados? Esta ação não pode ser desfeita.
-        </ConfirmationModal>
-        
-        <ConfirmationModal
-            isOpen={!!userToReset}
-            onClose={() => setUserToReset(null)}
-            onConfirm={handleResetUser}
-            title="Confirmar Reset de Dados"
-            confirmText="Resetar Dados"
-            confirmVariant="danger"
-        >
-          Você tem certeza que deseja apagar TODAS as transações, categorias e histórico de chat do usuário <strong>@{userToReset}</strong>? A conta do usuário será mantida, mas seus dados financeiros serão resetados para o padrão.
-        </ConfirmationModal>
-
-    </div>
-  );
-}
-
 // --- PWA INSTALL PROMPT FOR IOS ---
 const IOSInstallPrompt: React.FC = () => {
     const [isVisible, setIsVisible] = useState(false);
@@ -1426,6 +1306,7 @@ const IOSInstallPrompt: React.FC = () => {
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [userData, setUserData] = useState<UserData>(DEFAULT_USER_DATA);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -1443,113 +1324,70 @@ const App: React.FC = () => {
   
   const [selectedMonth, setSelectedMonth] = useState('all');
 
-  // Load user from session storage on mount
+  // --- AUTH LOGIC ---
   useEffect(() => {
-    const loadInitialUser = async () => {
-        const loggedInUser = sessionStorage.getItem('controlFin_currentUser');
-        if (loggedInUser) {
-            const allProfiles = await storageService.getAllProfiles();
-            const profile = allProfiles[loggedInUser];
-            const data = await storageService.getUserData(loggedInUser);
-            if (profile && data) {
-                setCurrentUser(profile);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        setIsLoading(true);
+        if (user) {
+            const data = await storageService.getUserData(user.uid);
+            const profile: UserProfile = {
+                uid: user.uid,
+                displayName: user.displayName || user.email!.split('@')[0],
+                email: user.email!,
+                profilePicture: user.photoURL || undefined,
+            };
+            
+            if (data) {
                 setUserData(data);
                 document.documentElement.setAttribute('data-theme', data.theme);
             } else {
-                // Data inconsistency, log out
-                sessionStorage.removeItem('controlFin_currentUser');
+                // New user registration, create their data doc
+                const newUserData = { ...DEFAULT_USER_DATA, categories: [...INITIAL_CATEGORIES] };
+                await storageService.saveUserData(user.uid, newUserData);
+                setUserData(newUserData);
+                document.documentElement.setAttribute('data-theme', newUserData.theme);
             }
+            setCurrentUser(profile);
+        } else {
+            setCurrentUser(null);
+            setUserData(DEFAULT_USER_DATA);
         }
-    };
-    loadInitialUser();
+        setIsLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
   
-  // --- AUTH LOGIC ---
-  
-  const handleRegister = async (username: string, password: string) => {
-    const allProfiles = await storageService.getAllProfiles();
-    if (allProfiles[username]) {
-      throw new Error("Este nome de usuário já existe.");
-    }
-    
-    const newUserProfile: UserProfile = {
-      username,
-      displayName: username,
-      registeredAt: new Date().toISOString(),
-    };
-    
-    const allPasswords = await storageService.getAllPasswords();
-    
-    // In a real app, hash the password. Here we store it in plain text for simplicity.
-    allPasswords[username] = password;
-    allProfiles[username] = newUserProfile;
-    
-    await storageService.saveAllProfiles(allProfiles);
-    await storageService.saveAllPasswords(allPasswords);
-    
-    // Automatically log in the user after registration
-    await handleLogin(username, password);
+  const handleRegister = async (email: string, password: string) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(userCredential.user, {
+      displayName: email.split('@')[0]
+    });
+    // The onAuthStateChanged listener will handle setting user data
   };
   
-  const handleLogin = async (username: string, password: string) => {
-    const allProfiles = await storageService.getAllProfiles();
-    const allPasswords = await storageService.getAllPasswords();
-    const profile = allProfiles[username];
-    
-    if (!profile || allPasswords[username] !== password) {
-      throw new Error("Usuário ou senha inválidos.");
-    }
-
-    let data = await storageService.getUserData(username);
-    if (!data) {
-      data = { ...DEFAULT_USER_DATA, categories: [...INITIAL_CATEGORIES] }; // ensure fresh copy
-      await storageService.saveUserData(username, data);
-    }
-    
-    setCurrentUser(profile);
-    setUserData(data);
-    sessionStorage.setItem('controlFin_currentUser', username);
-    document.documentElement.setAttribute('data-theme', data.theme);
+  const handleLogin = async (email: string, password: string) => {
+    await signInWithEmailAndPassword(auth, email, password);
+    // The onAuthStateChanged listener will handle login state
   };
   
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setUserData(DEFAULT_USER_DATA);
-    sessionStorage.removeItem('controlFin_currentUser');
+  const handleLogout = async () => {
+    await signOut(auth);
   };
   
-  // --- ADMIN LOGIC ---
-  const handleDeleteUser = async (username: string) => {
-    const allProfiles = await storageService.getAllProfiles();
-    const allPasswords = await storageService.getAllPasswords();
-    
-    delete allProfiles[username];
-    delete allPasswords[username];
-    
-    await storageService.saveAllProfiles(allProfiles);
-    await storageService.saveAllPasswords(allPasswords);
-    await storageService.removeUserData(username);
-  };
-  
-  const handleResetUserData = (username: string) => {
-    storageService.saveUserData(username, { ...DEFAULT_USER_DATA, categories: [...INITIAL_CATEGORIES] });
-    alert(`Dados do usuário @${username} foram resetados.`);
-  }
-
-  // --- DATA SYNC ---
-  useEffect(() => {
-    const syncData = async () => {
+  // --- DATA SYNC WRAPPER ---
+  const updateAndSaveUserData = (updater: (current: UserData) => UserData) => {
+    setUserData(prev => {
+        const newState = updater(prev);
         if (currentUser) {
-          await storageService.saveUserData(currentUser.username, userData);
-          document.documentElement.setAttribute('data-theme', userData.theme);
+            storageService.saveUserData(currentUser.uid, newState);
         }
-    };
-    syncData();
-  }, [userData, currentUser]);
+        return newState;
+    });
+  };
   
   // --- TRANSACTIONS LOGIC ---
   const handleSaveTransaction = (transactionData: Omit<Transaction, 'id' | 'subItems'>) => {
-    setUserData(prev => {
+    updateAndSaveUserData(prev => {
       let newTransactions = [...prev.transactions];
 
       if (editingTransaction) { // --- UPDATE ---
@@ -1557,7 +1395,6 @@ const App: React.FC = () => {
             if (t.id === editingTransaction.id) {
                 return { ...t, ...transactionData };
             }
-            // Update parent if a subitem is edited
             if (t.subItems?.some(st => st.id === editingTransaction.id)) {
                 return {
                     ...t,
@@ -1583,7 +1420,6 @@ const App: React.FC = () => {
         }
       }
       
-      // Recalculate parent amount if needed
       newTransactions = newTransactions.map(t => {
           if (t.subItems && t.subItems.length > 0) {
               const newAmount = t.subItems.reduce((sum, item) => sum + item.amount, 0);
@@ -1611,17 +1447,13 @@ const App: React.FC = () => {
 
   const confirmDeleteTransaction = () => {
     if (transactionToDelete) {
-      setUserData(prev => {
+      updateAndSaveUserData(prev => {
         let newTransactions = [...prev.transactions];
-
-        // Find and remove the transaction or sub-transaction
         newTransactions = newTransactions.filter(t => t.id !== transactionToDelete);
         
-        // Also check within sub-items
         newTransactions = newTransactions.map(t => {
           if (t.subItems) {
             const filteredSubItems = t.subItems.filter(st => st.id !== transactionToDelete);
-            // If subitems changed, recalculate parent amount
             if (filteredSubItems.length < t.subItems.length) {
               const newAmount = filteredSubItems.reduce((sum, item) => sum + item.amount, 0);
               return { ...t, subItems: filteredSubItems, amount: newAmount };
@@ -1639,14 +1471,12 @@ const App: React.FC = () => {
   
   // --- CATEGORIES LOGIC ---
   const handleSaveCategory = (categoryData: Omit<Category, 'id'>, id?: string) => {
-    setUserData(prev => {
+    updateAndSaveUserData(prev => {
         const newCategories = [...prev.categories];
-        if (id) { // Update
+        if (id) {
             const index = newCategories.findIndex(c => c.id === id);
-            if (index !== -1) {
-                newCategories[index] = { ...newCategories[index], ...categoryData };
-            }
-        } else { // Create
+            if (index !== -1) newCategories[index] = { ...newCategories[index], ...categoryData };
+        } else {
             newCategories.push({ ...categoryData, id: `cat_${Date.now()}` });
         }
         return { ...prev, categories: newCategories };
@@ -1654,8 +1484,7 @@ const App: React.FC = () => {
   };
 
   const handleDeleteCategory = (categoryId: string) => {
-      setUserData(prev => {
-          // Prevent deleting a category if it's in use
+      updateAndSaveUserData(prev => {
           if (prev.transactions.some(t => prev.categories.find(c => c.id === categoryId)?.name === t.category)) {
               alert("Não é possível excluir uma categoria que está sendo usada em transações.");
               return prev;
@@ -1667,32 +1496,41 @@ const App: React.FC = () => {
 
   // --- SETTINGS/PROFILE LOGIC ---
   const handleUpdateSettings = (newSettings: Partial<UserData>) => {
-      setUserData(prev => ({...prev, ...newSettings}));
+      updateAndSaveUserData(prev => ({...prev, ...newSettings}));
+      document.documentElement.setAttribute('data-theme', newSettings.theme || userData.theme);
   };
   
-  const handleUpdateProfile = async (newProfile: Partial<UserProfile>) => {
-      if (!currentUser) return;
-      const allProfiles = await storageService.getAllProfiles();
-      const updatedProfile = { ...allProfiles[currentUser.username], ...newProfile };
-      allProfiles[currentUser.username] = updatedProfile;
-      await storageService.saveAllProfiles(allProfiles);
-      setCurrentUser(updatedProfile);
+  const handleUpdateProfile = async (newProfile: Partial<Omit<UserProfile, 'uid'>>) => {
+      if (!currentUser || !auth.currentUser) return;
+      
+      await updateProfile(auth.currentUser, {
+        displayName: newProfile.displayName,
+        photoURL: newProfile.profilePicture,
+      });
+
+      setCurrentUser(prev => ({
+        ...prev!,
+        displayName: newProfile.displayName || prev!.displayName,
+        profilePicture: newProfile.profilePicture,
+      }));
   };
   
   // --- FINASSIST LOGIC ---
   const handleFinAssistSend = async (message: string) => {
     const newMessage: ChatMessage = { sender: 'user', text: message };
-    setUserData(prev => ({ ...prev, chatHistory: [...prev.chatHistory, newMessage]}));
+    
+    // Optimistically update UI
+    setUserData(prev => ({...prev, chatHistory: [...prev.chatHistory, newMessage]}));
     setFinAssistThinking(true);
     
     try {
         const responseText = await getFinAssistResponse(message, userData.chatHistory, userData.transactions);
         const assistMessage: ChatMessage = { sender: 'finassist', text: responseText };
-        setUserData(prev => ({ ...prev, chatHistory: [...prev.chatHistory, assistMessage]}));
+        updateAndSaveUserData(prev => ({ ...prev, chatHistory: [...prev.chatHistory, assistMessage]}));
     } catch (error) {
         console.error("FinAssist Error:", error);
         const errorMessage: ChatMessage = { sender: 'finassist', text: "Desculpe, não consegui processar sua solicitação no momento." };
-        setUserData(prev => ({ ...prev, chatHistory: [...prev.chatHistory, errorMessage]}));
+        updateAndSaveUserData(prev => ({ ...prev, chatHistory: [...prev.chatHistory, errorMessage]}));
     } finally {
         setFinAssistThinking(false);
     }
@@ -1752,16 +1590,20 @@ const App: React.FC = () => {
                   userProfile={currentUser!} 
                   onUpdateProfile={handleUpdateProfile}
                />;
-      case 'Admin Panel':
-        if (currentUser?.username === 'admin') {
-            return <AdminPanel onDeleteUser={handleDeleteUser} onResetUser={handleResetUserData} />;
-        }
-        return <p>Acesso negado.</p>;
       default:
         return <div>Página não encontrada</div>;
     }
   };
   
+  if (isLoading) {
+      return (
+        <div className="w-screen h-screen bg-[var(--color-bg-primary)] flex flex-col items-center justify-center">
+            <Spinner />
+            <p className="mt-4 text-[var(--color-text-secondary)]">Carregando...</p>
+        </div>
+      );
+  }
+
   if (!currentUser) {
     return <LoginScreen 
              onLogin={handleLogin} 

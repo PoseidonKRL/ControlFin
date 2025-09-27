@@ -1,4 +1,4 @@
-export type Page = 'Dashboard' | 'Transactions' | 'Reports' | 'Settings' | 'Admin Panel';
+export type Page = 'Dashboard' | 'Transactions' | 'Reports' | 'Settings';
 
 export enum TransactionType {
   INCOME = 'INCOME',
@@ -45,9 +45,8 @@ export interface UserData {
 }
 
 export interface UserProfile {
-  username: string; // The unique login identifier, cannot be changed
+  uid: string; // The unique user ID from Firebase Auth
   displayName: string; // The display name, can be changed
-  email?: string; // User's email address is now optional
-  profilePicture?: string; // base64 encoded image
-  registeredAt: string; // ISO string
+  email?: string; // User's email address
+  profilePicture?: string; // base64 encoded image (or URL from Firebase Storage)
 }
